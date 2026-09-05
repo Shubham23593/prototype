@@ -1,0 +1,29 @@
+{
+  "name": "India \u00b7 historical observation window",
+  "mode": "archive",
+  "rows": 67359,
+  "date_start": "2025-03-25T00:00:00+00:00",
+  "date_end": "2025-03-31T20:44:00+00:00",
+  "source_sha256": "62b397c086bf1934010fd86987506e8aca45d74a9fc0270cd434128a9a9a3db6",
+  "replay_sha256": "517686581d0566fac94c2dc095198c3ca51a07c2f2dab45f155ccfa6cadc9624",
+  "source": {
+    "name": "India VIIRS S-NPP historical observations, 2025",
+    "primary_source": "NASA FIRMS / VIIRS S-NPP standard processing",
+    "primary_url": "https://firms.modaps.eosdis.nasa.gov/data/country/viirs-snpp/2025/viirs-snpp_2025_India.csv",
+    "download_url": "https://api.github.com/repos/UjjwalKumar7209/sih-2026/contents/SIH_Industrial_Fire_AI/firms_historical_india.csv?ref=30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
+    "mirror_url": "https://github.com/UjjwalKumar7209/sih-2026/blob/30ae6eb05c400b1d40aac7daa4c4a9bbceec667f/SIH_Industrial_Fire_AI/firms_historical_india.csv",
+    "mirror_commit": "30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
+    "mirror_committed_at": "2026-08-28T14:38:24Z",
+    "sha256": "62b397c086bf1934010fd86987506e8aca45d74a9fc0270cd434128a9a9a3db6",
+    "bytes": 24547074,
+    "retrieved_at": "2026-09-05T11:44:06.994835+00:00",
+    "notes": [
+      "Downloaded from a pinned public mirror of a NASA-format FIRMS archive; direct NASA access is unavailable in this sandbox.",
+      "Mirror provenance is disclosed; bit-for-bit equivalence to the primary NASA country archive has not been verified.",
+      "NASA type is an algorithmic source-type label, not a verified incident report. Collection-2 type-field reprocessing status of the mirror is unverified."
+    ]
+  },
+  "selection": "All valid source observations from the final seven calendar days; no spatial or class sampling.",
+  "history": "Past-only 30-day features were computed from the full quarter before selecting this window.",
+  "training_overlap": "Historical replay may contain training-region records. Use the separate model-card holdout metrics, not replay performance, for evaluation."
+}

@@ -1,0 +1,17 @@
+{
+  "name": "India VIIRS S-NPP January\u2013March 2025",
+  "primary_source": "NASA FIRMS / VIIRS S-NPP standard processing",
+  "primary_url": "https://firms.modaps.eosdis.nasa.gov/data/country/viirs-snpp/2025/viirs-snpp_2025_India.csv",
+  "archive_portal": "https://firms.modaps.eosdis.nasa.gov/download/",
+  "download_url": "https://api.github.com/repos/UjjwalKumar7209/sih-2026/contents/SIH_Industrial_Fire_AI/firms_historical_india.csv?ref=30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
+  "mirror_url": "https://github.com/UjjwalKumar7209/sih-2026/blob/30ae6eb05c400b1d40aac7daa4c4a9bbceec667f/SIH_Industrial_Fire_AI/firms_historical_india.csv",
+  "mirror_commit": "30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
+  "sha256": "62b397c086bf1934010fd86987506e8aca45d74a9fc0270cd434128a9a9a3db6",
+  "bytes": 24547074,
+  "retrieved_at": "2026-09-05T12:28:02.276439+00:00",
+  "notes": [
+    "NASA type is an algorithmic source-type label, not an independently verified incident label.",
+    "Collection-2 type-field reprocessing status is unverified for the mirror. Request freshly reprocessed standard data before scientific use.",
+    "Explicit pinned public mirror. Bit-for-bit equivalence to the complete NASA country archive has not been verified; this is a quarterly subset."
+  ]
+}
