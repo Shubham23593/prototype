@@ -1,0 +1,3 @@
+Natural Earth, public domain, 1:110m cultural vectors. https://www.naturalearthdata.com/about/terms-of-use/
+Source: https://github.com/nvkelso/natural-earth-vector/tree/ca96624a56bd078437bca8184e78163e5039ad19/geojson
+Properties reduced for display. Geometry not fabricated. Borders are illustrative, not authoritative.

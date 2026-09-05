@@ -1,0 +1,311 @@
+{
+  "status": "ready",
+  "model_id": "xgb-62b397c0-thermal",
+  "trained_at": "2026-09-05T12:34:52.840431+00:00",
+  "algorithm": "XGBoost",
+  "library_version": "3.0.5",
+  "feature_mode": "Thermal + temporal baseline",
+  "target": "NASA inferred source type",
+  "parameters": {
+    "n_estimators": 220,
+    "max_depth": 5,
+    "learning_rate": 0.065,
+    "min_child_weight": 5,
+    "subsample": 0.85,
+    "colsample_bytree": 0.85,
+    "tree_method": "hist",
+    "n_jobs": 2,
+    "random_state": 42,
+    "eval_metric": "mlogloss"
+  },
+  "classes": [
+    {
+      "code": 0,
+      "key": "vegetation",
+      "label": "Presumed vegetation fire",
+      "rows": 286722
+    },
+    {
+      "code": 2,
+      "key": "static",
+      "label": "Static thermal source",
+      "rows": 28912
+    },
+    {
+      "code": 3,
+      "key": "offshore",
+      "label": "Offshore thermal source",
+      "rows": 401
+    }
+  ],
+  "features": [
+    {
+      "name": "bright_ti4",
+      "importance": 0.015535138547420502
+    },
+    {
+      "name": "bright_ti5",
+      "importance": 0.014013506472110748
+    },
+    {
+      "name": "temperature_delta",
+      "importance": 0.01224600337445736
+    },
+    {
+      "name": "log_frp",
+      "importance": 0.0134489880874753
+    },
+    {
+      "name": "frp_density",
+      "importance": 0.013264006935060024
+    },
+    {
+      "name": "scan",
+      "importance": 0.011041504330933094
+    },
+    {
+      "name": "track",
+      "importance": 0.010899192653596401
+    },
+    {
+      "name": "is_day",
+      "importance": 0.1690748631954193
+    },
+    {
+      "name": "confidence_score",
+      "importance": 0.008917365223169327
+    },
+    {
+      "name": "hour_sin",
+      "importance": 0.02020692266523838
+    },
+    {
+      "name": "hour_cos",
+      "importance": 0.017107324674725533
+    },
+    {
+      "name": "season_sin",
+      "importance": 0.026104038581252098
+    },
+    {
+      "name": "season_cos",
+      "importance": 0.018816713243722916
+    },
+    {
+      "name": "prior_detections_30d",
+      "importance": 0.09231733530759811
+    },
+    {
+      "name": "prior_active_days_30d",
+      "importance": 0.11935458332300186
+    },
+    {
+      "name": "history_coverage_days",
+      "importance": 0.02101263962686062
+    },
+    {
+      "name": "recurrence_fraction",
+      "importance": 0.41663995385169983
+    }
+  ],
+  "feature_names": [
+    "bright_ti4",
+    "bright_ti5",
+    "temperature_delta",
+    "log_frp",
+    "frp_density",
+    "scan",
+    "track",
+    "is_day",
+    "confidence_score",
+    "hour_sin",
+    "hour_cos",
+    "season_sin",
+    "season_cos",
+    "prior_detections_30d",
+    "prior_active_days_30d",
+    "history_coverage_days",
+    "recurrence_fraction"
+  ],
+  "metrics": {
+    "spatial_temporal": {
+      "available": true,
+      "rows": 44237,
+      "accuracy": 0.9922689151615164,
+      "balanced_accuracy": 0.6514724901033432,
+      "macro_f1": 0.6274318311551829,
+      "majority_baseline_accuracy": 0.9691208716685128,
+      "majority_baseline_macro_f1": 0.32810610583031025,
+      "confusion_matrix": [
+        [
+          42590,
+          280,
+          1
+        ],
+        [
+          51,
+          1305,
+          2
+        ],
+        [
+          6,
+          2,
+          0
+        ]
+      ],
+      "per_class": {
+        "Presumed vegetation fire": {
+          "precision": 0.99866344643234,
+          "recall": 0.9934454526369807,
+          "f1-score": 0.9960476157066349,
+          "support": 42871.0
+        },
+        "Static thermal source": {
+          "precision": 0.8223062381852552,
+          "recall": 0.9609720176730486,
+          "f1-score": 0.8862478777589134,
+          "support": 1358.0
+        },
+        "Offshore thermal source": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 8.0
+        },
+        "accuracy": 0.9922689151615164,
+        "macro avg": {
+          "precision": 0.6069898948725317,
+          "recall": 0.6514724901033432,
+          "f1-score": 0.6274318311551829,
+          "support": 44237.0
+        },
+        "weighted avg": {
+          "precision": 0.993068980343523,
+          "recall": 0.9922689151615164,
+          "f1-score": 0.9924968228170027,
+          "support": 44237.0
+        }
+      },
+      "date_start": "2025-03-01T05:55:00+00:00",
+      "date_end": "2025-03-31T20:44:00+00:00",
+      "note": "Metrics reproduce NASA algorithmic type labels, not independently verified industrial incidents."
+    },
+    "temporal": {
+      "available": true,
+      "rows": 168047,
+      "accuracy": 0.990913256410409,
+      "balanced_accuracy": 0.6745787329740732,
+      "macro_f1": 0.6631944068413619,
+      "majority_baseline_accuracy": 0.952370467785798,
+      "majority_baseline_macro_f1": 0.32520141831001653,
+      "confusion_matrix": [
+        [
+          158857,
+          1177,
+          9
+        ],
+        [
+          171,
+          7655,
+          40
+        ],
+        [
+          39,
+          91,
+          8
+        ]
+      ],
+      "per_class": {
+        "Presumed vegetation fire": {
+          "precision": 0.9986798015930394,
+          "recall": 0.9925894915741394,
+          "f1-score": 0.9956253329572875,
+          "support": 160043.0
+        },
+        "Static thermal source": {
+          "precision": 0.8578953266838507,
+          "recall": 0.9731756928553267,
+          "f1-score": 0.9119066055155162,
+          "support": 7866.0
+        },
+        "Offshore thermal source": {
+          "precision": 0.14035087719298245,
+          "recall": 0.057971014492753624,
+          "f1-score": 0.08205128205128205,
+          "support": 138.0
+        },
+        "accuracy": 0.990913256410409,
+        "macro avg": {
+          "precision": 0.6656420018232908,
+          "recall": 0.6745787329740732,
+          "f1-score": 0.6631944068413619,
+          "support": 168047.0
+        },
+        "weighted avg": {
+          "precision": 0.9913850562467799,
+          "recall": 0.990913256410409,
+          "f1-score": 0.9909563729099078,
+          "support": 168047.0
+        }
+      },
+      "date_start": "2025-03-01T05:55:00+00:00",
+      "date_end": "2025-03-31T20:44:00+00:00",
+      "note": "Metrics reproduce NASA algorithmic type labels, not independently verified industrial incidents."
+    }
+  },
+  "dataset": {
+    "rows": 316035,
+    "train_rows": 83356,
+    "test_rows": 44237,
+    "temporal_test_rows": 168047,
+    "date_start": "2025-01-01T06:01:00+00:00",
+    "date_end": "2025-03-31T20:44:00+00:00",
+    "sha256": "62b397c086bf1934010fd86987506e8aca45d74a9fc0270cd434128a9a9a3db6",
+    "quality": {
+      "input_rows": 316036,
+      "valid_rows": 316035,
+      "invalid_or_unsupported_rows": 0,
+      "duplicates_removed": 1
+    },
+    "excluded_rare_classes": {},
+    "provenance": {
+      "name": "India VIIRS S-NPP January\u2013March 2025",
+      "primary_source": "NASA FIRMS / VIIRS S-NPP standard processing",
+      "primary_url": "https://firms.modaps.eosdis.nasa.gov/data/country/viirs-snpp/2025/viirs-snpp_2025_India.csv",
+      "archive_portal": "https://firms.modaps.eosdis.nasa.gov/download/",
+      "download_url": "https://api.github.com/repos/UjjwalKumar7209/sih-2026/contents/SIH_Industrial_Fire_AI/firms_historical_india.csv?ref=30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
+      "mirror_url": "https://github.com/UjjwalKumar7209/sih-2026/blob/30ae6eb05c400b1d40aac7daa4c4a9bbceec667f/SIH_Industrial_Fire_AI/firms_historical_india.csv",
+      "mirror_commit": "30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
+      "sha256": "62b397c086bf1934010fd86987506e8aca45d74a9fc0270cd434128a9a9a3db6",
+      "bytes": 24547074,
+      "retrieved_at": "2026-09-05T12:28:02.276439+00:00",
+      "notes": [
+        "NASA type is an algorithmic source-type label, not an independently verified incident label.",
+        "Collection-2 type-field reprocessing status is unverified for the mirror. Request freshly reprocessed standard data before scientific use.",
+        "Explicit pinned public mirror. Bit-for-bit equivalence to the complete NASA country archive has not been verified; this is a quarterly subset."
+      ]
+    }
+  },
+  "split": {
+    "method": "Chronological cutoff + 0.1\u00b0 GroupShuffleSplit spatial blocks",
+    "cutoff": "2025-03-01T00:00:00+00:00",
+    "seed": 42,
+    "train_blocks": 9777,
+    "test_blocks": 2871,
+    "overlapping_blocks": 0,
+    "history": "Only prior observations within 750 m / 30 days. Unlabelled past covariates can inform a held-out location; held-out labels never do.",
+    "test_used_for_tuning": false,
+    "history_source_sha256": "62b397c086bf1934010fd86987506e8aca45d74a9fc0270cd434128a9a9a3db6"
+  },
+  "abstention_threshold": 0.65,
+  "warnings": [
+    "A research baseline, not an emergency warning system. Independent incident-level validation is required.",
+    "Static thermal sources and offshore detections are not confirmed industrial fires. Vegetation labels do not distinguish forest from agricultural burning.",
+    "Scores are uncalibrated model probabilities, not verified incident confidence.",
+    "The default archive covers India in January\u2013March 2025 only. Inspect this card\u2019s actual source and date range; other seasons, geographies, and satellites may have domain shift.",
+    "VIIRS Collection-2 type labels were affected by a bug corrected in May 2025. The mirror's reprocessing status is unverified; obtain a current standard archive before scientific use.",
+    "Sentinel-2 and OSM are on-demand evidence, NOT inputs to this baseline.",
+    "The live 7-day feed gives partial recurrence coverage; missing detections/cloud cover do not prove a source is inactive."
+  ],
+  "artifact_sha256": "22edb6a3977e4a6cb7b57bfe1530609a0630fb4ca74fa893c928dff2b6604c79"
+}

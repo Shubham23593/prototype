@@ -1,0 +1,590 @@
+{
+  "quality": {
+    "input_rows": 316036,
+    "valid_rows": 316035,
+    "invalid_or_unsupported_rows": 0,
+    "duplicates_removed": 1
+  },
+  "daily": [
+    {
+      "date": "2025-01-01",
+      "detections": 1308,
+      "total_frp": 3771.19,
+      "mean_frp": 2.8831727828746176
+    },
+    {
+      "date": "2025-01-02",
+      "detections": 1581,
+      "total_frp": 5610.16,
+      "mean_frp": 3.5484882985452244
+    },
+    {
+      "date": "2025-01-03",
+      "detections": 1503,
+      "total_frp": 5637.93,
+      "mean_frp": 3.7511177644710583
+    },
+    {
+      "date": "2025-01-04",
+      "detections": 1486,
+      "total_frp": 6299.04,
+      "mean_frp": 4.2389232839838495
+    },
+    {
+      "date": "2025-01-05",
+      "detections": 1235,
+      "total_frp": 4476.04,
+      "mean_frp": 3.624323886639676
+    },
+    {
+      "date": "2025-01-06",
+      "detections": 1131,
+      "total_frp": 3750.71,
+      "mean_frp": 3.3162776304155615
+    },
+    {
+      "date": "2025-01-07",
+      "detections": 1121,
+      "total_frp": 4016.24,
+      "mean_frp": 3.582729705619982
+    },
+    {
+      "date": "2025-01-08",
+      "detections": 1116,
+      "total_frp": 3736.69,
+      "mean_frp": 3.34828853046595
+    },
+    {
+      "date": "2025-01-09",
+      "detections": 1047,
+      "total_frp": 3610.46,
+      "mean_frp": 3.448385864374403
+    },
+    {
+      "date": "2025-01-10",
+      "detections": 1165,
+      "total_frp": 4202.97,
+      "mean_frp": 3.6076995708154507
+    },
+    {
+      "date": "2025-01-11",
+      "detections": 1043,
+      "total_frp": 3829.34,
+      "mean_frp": 3.671466922339406
+    },
+    {
+      "date": "2025-01-12",
+      "detections": 926,
+      "total_frp": 2536.28,
+      "mean_frp": 2.738963282937365
+    },
+    {
+      "date": "2025-01-13",
+      "detections": 787,
+      "total_frp": 2089.38,
+      "mean_frp": 2.654866581956798
+    },
+    {
+      "date": "2025-01-14",
+      "detections": 636,
+      "total_frp": 2587.91,
+      "mean_frp": 4.069040880503144
+    },
+    {
+      "date": "2025-01-15",
+      "detections": 578,
+      "total_frp": 2294.7,
+      "mean_frp": 3.970069204152249
+    },
+    {
+      "date": "2025-01-16",
+      "detections": 976,
+      "total_frp": 4238.99,
+      "mean_frp": 4.3432274590163935
+    },
+    {
+      "date": "2025-01-17",
+      "detections": 1344,
+      "total_frp": 6410.05,
+      "mean_frp": 4.769382440476191
+    },
+    {
+      "date": "2025-01-18",
+      "detections": 1230,
+      "total_frp": 4765.03,
+      "mean_frp": 3.8740081300813007
+    },
+    {
+      "date": "2025-01-19",
+      "detections": 1212,
+      "total_frp": 4328.82,
+      "mean_frp": 3.5716336633663364
+    },
+    {
+      "date": "2025-01-20",
+      "detections": 1128,
+      "total_frp": 4645.47,
+      "mean_frp": 4.118324468085107
+    },
+    {
+      "date": "2025-01-21",
+      "detections": 1608,
+      "total_frp": 6766.47,
+      "mean_frp": 4.208003731343283
+    },
+    {
+      "date": "2025-01-22",
+      "detections": 1480,
+      "total_frp": 5518.24,
+      "mean_frp": 3.7285405405405405
+    },
+    {
+      "date": "2025-01-23",
+      "detections": 1273,
+      "total_frp": 4889.86,
+      "mean_frp": 3.841209740769835
+    },
+    {
+      "date": "2025-01-24",
+      "detections": 1064,
+      "total_frp": 4937.45,
+      "mean_frp": 4.640460526315789
+    },
+    {
+      "date": "2025-01-25",
+      "detections": 1405,
+      "total_frp": 5813.4,
+      "mean_frp": 4.137651245551601
+    },
+    {
+      "date": "2025-01-26",
+      "detections": 1964,
+      "total_frp": 7745.89,
+      "mean_frp": 3.9439358452138493
+    },
+    {
+      "date": "2025-01-27",
+      "detections": 1998,
+      "total_frp": 8246.14,
+      "mean_frp": 4.127197197197197
+    },
+    {
+      "date": "2025-01-28",
+      "detections": 1551,
+      "total_frp": 5575.83,
+      "mean_frp": 3.594990328820116
+    },
+    {
+      "date": "2025-01-29",
+      "detections": 1119,
+      "total_frp": 4448.57,
+      "mean_frp": 3.975487042001787
+    },
+    {
+      "date": "2025-01-30",
+      "detections": 1006,
+      "total_frp": 4020.61,
+      "mean_frp": 3.996630218687873
+    },
+    {
+      "date": "2025-01-31",
+      "detections": 1324,
+      "total_frp": 4916.98,
+      "mean_frp": 3.713731117824773
+    },
+    {
+      "date": "2025-02-01",
+      "detections": 1658,
+      "total_frp": 6321.45,
+      "mean_frp": 3.8126960193003616
+    },
+    {
+      "date": "2025-02-02",
+      "detections": 1740,
+      "total_frp": 6983.13,
+      "mean_frp": 4.013293103448276
+    },
+    {
+      "date": "2025-02-03",
+      "detections": 1541,
+      "total_frp": 6769.31,
+      "mean_frp": 4.392803374432187
+    },
+    {
+      "date": "2025-02-04",
+      "detections": 1775,
+      "total_frp": 7573.72,
+      "mean_frp": 4.266884507042254
+    },
+    {
+      "date": "2025-02-05",
+      "detections": 1633,
+      "total_frp": 7161.27,
+      "mean_frp": 4.385345988977343
+    },
+    {
+      "date": "2025-02-06",
+      "detections": 2795,
+      "total_frp": 13022.84,
+      "mean_frp": 4.659334525939177
+    },
+    {
+      "date": "2025-02-07",
+      "detections": 2512,
+      "total_frp": 13157.29,
+      "mean_frp": 5.237774681528663
+    },
+    {
+      "date": "2025-02-08",
+      "detections": 2402,
+      "total_frp": 20925.45,
+      "mean_frp": 8.71167776852623
+    },
+    {
+      "date": "2025-02-09",
+      "detections": 1772,
+      "total_frp": 8307.77,
+      "mean_frp": 4.688357787810384
+    },
+    {
+      "date": "2025-02-10",
+      "detections": 1808,
+      "total_frp": 9514.66,
+      "mean_frp": 5.262533185840708
+    },
+    {
+      "date": "2025-02-11",
+      "detections": 2341,
+      "total_frp": 14406.79,
+      "mean_frp": 6.154117898334046
+    },
+    {
+      "date": "2025-02-12",
+      "detections": 2374,
+      "total_frp": 12843.43,
+      "mean_frp": 5.410037910699242
+    },
+    {
+      "date": "2025-02-13",
+      "detections": 2848,
+      "total_frp": 14573.74,
+      "mean_frp": 5.117183988764045
+    },
+    {
+      "date": "2025-02-14",
+      "detections": 2589,
+      "total_frp": 12348.48,
+      "mean_frp": 4.769594438006952
+    },
+    {
+      "date": "2025-02-15",
+      "detections": 2694,
+      "total_frp": 16165.45,
+      "mean_frp": 6.000538233110617
+    },
+    {
+      "date": "2025-02-16",
+      "detections": 2858,
+      "total_frp": 14653.83,
+      "mean_frp": 5.127302309307208
+    },
+    {
+      "date": "2025-02-17",
+      "detections": 2577,
+      "total_frp": 14042.66,
+      "mean_frp": 5.449227784245246
+    },
+    {
+      "date": "2025-02-18",
+      "detections": 2509,
+      "total_frp": 14156.92,
+      "mean_frp": 5.642455161418892
+    },
+    {
+      "date": "2025-02-19",
+      "detections": 1669,
+      "total_frp": 8424.53,
+      "mean_frp": 5.047651288196525
+    },
+    {
+      "date": "2025-02-20",
+      "detections": 1699,
+      "total_frp": 8852.57,
+      "mean_frp": 5.210459093584461
+    },
+    {
+      "date": "2025-02-21",
+      "detections": 1945,
+      "total_frp": 10307.58,
+      "mean_frp": 5.299526992287918
+    },
+    {
+      "date": "2025-02-22",
+      "detections": 2924,
+      "total_frp": 13205.8,
+      "mean_frp": 4.516347469220246
+    },
+    {
+      "date": "2025-02-23",
+      "detections": 3132,
+      "total_frp": 13363.42,
+      "mean_frp": 4.266736909323116
+    },
+    {
+      "date": "2025-02-24",
+      "detections": 3366,
+      "total_frp": 17483.16,
+      "mean_frp": 5.194046345811052
+    },
+    {
+      "date": "2025-02-25",
+      "detections": 1852,
+      "total_frp": 12762.66,
+      "mean_frp": 6.891285097192225
+    },
+    {
+      "date": "2025-02-26",
+      "detections": 2708,
+      "total_frp": 16604.95,
+      "mean_frp": 6.131813146233383
+    },
+    {
+      "date": "2025-02-27",
+      "detections": 3007,
+      "total_frp": 18271.61,
+      "mean_frp": 6.076358496840705
+    },
+    {
+      "date": "2025-02-28",
+      "detections": 2678,
+      "total_frp": 14317.38,
+      "mean_frp": 5.34629574309186
+    },
+    {
+      "date": "2025-03-01",
+      "detections": 2737,
+      "total_frp": 13241.16,
+      "mean_frp": 4.837837047862624
+    },
+    {
+      "date": "2025-03-02",
+      "detections": 2139,
+      "total_frp": 10027.82,
+      "mean_frp": 4.6880878915381015
+    },
+    {
+      "date": "2025-03-03",
+      "detections": 2640,
+      "total_frp": 20093.69,
+      "mean_frp": 7.611246212121212
+    },
+    {
+      "date": "2025-03-04",
+      "detections": 4230,
+      "total_frp": 36888.47,
+      "mean_frp": 8.720678486997636
+    },
+    {
+      "date": "2025-03-05",
+      "detections": 7199,
+      "total_frp": 41057.79,
+      "mean_frp": 5.703262953187943
+    },
+    {
+      "date": "2025-03-06",
+      "detections": 12116,
+      "total_frp": 85194.2,
+      "mean_frp": 7.031545064377682
+    },
+    {
+      "date": "2025-03-07",
+      "detections": 8533,
+      "total_frp": 72295.58,
+      "mean_frp": 8.472469237079574
+    },
+    {
+      "date": "2025-03-08",
+      "detections": 6065,
+      "total_frp": 52600.12,
+      "mean_frp": 8.672732069249795
+    },
+    {
+      "date": "2025-03-09",
+      "detections": 3779,
+      "total_frp": 24202.43,
+      "mean_frp": 6.40445355914263
+    },
+    {
+      "date": "2025-03-10",
+      "detections": 5530,
+      "total_frp": 88172.46,
+      "mean_frp": 15.9443869801085
+    },
+    {
+      "date": "2025-03-11",
+      "detections": 8262,
+      "total_frp": 175403.42,
+      "mean_frp": 21.23014040183975
+    },
+    {
+      "date": "2025-03-12",
+      "detections": 6810,
+      "total_frp": 62363.27,
+      "mean_frp": 9.157602055800293
+    },
+    {
+      "date": "2025-03-13",
+      "detections": 6781,
+      "total_frp": 75410.03,
+      "mean_frp": 11.120783070343608
+    },
+    {
+      "date": "2025-03-14",
+      "detections": 6545,
+      "total_frp": 86395.49,
+      "mean_frp": 13.200227654698244
+    },
+    {
+      "date": "2025-03-15",
+      "detections": 7122,
+      "total_frp": 85390.7,
+      "mean_frp": 11.98970794720584
+    },
+    {
+      "date": "2025-03-16",
+      "detections": 8401,
+      "total_frp": 42436.49,
+      "mean_frp": 5.051361742649684
+    },
+    {
+      "date": "2025-03-17",
+      "detections": 9338,
+      "total_frp": 51231.09,
+      "mean_frp": 5.486302206039837
+    },
+    {
+      "date": "2025-03-18",
+      "detections": 9590,
+      "total_frp": 56372.21,
+      "mean_frp": 5.878228362877998
+    },
+    {
+      "date": "2025-03-19",
+      "detections": 6565,
+      "total_frp": 48164.72,
+      "mean_frp": 7.336591012947449
+    },
+    {
+      "date": "2025-03-20",
+      "detections": 5379,
+      "total_frp": 50828.53,
+      "mean_frp": 9.449438557352668
+    },
+    {
+      "date": "2025-03-21",
+      "detections": 3806,
+      "total_frp": 20511.32,
+      "mean_frp": 5.3892065160273255
+    },
+    {
+      "date": "2025-03-22",
+      "detections": 3130,
+      "total_frp": 19074.0,
+      "mean_frp": 6.0939297124600635
+    },
+    {
+      "date": "2025-03-23",
+      "detections": 3465,
+      "total_frp": 19737.55,
+      "mean_frp": 5.696262626262626
+    },
+    {
+      "date": "2025-03-24",
+      "detections": 4763,
+      "total_frp": 38744.59,
+      "mean_frp": 8.134492966617676
+    },
+    {
+      "date": "2025-03-25",
+      "detections": 6760,
+      "total_frp": 65627.42,
+      "mean_frp": 9.70819822485207
+    },
+    {
+      "date": "2025-03-26",
+      "detections": 8102,
+      "total_frp": 72410.82,
+      "mean_frp": 8.937400641816836
+    },
+    {
+      "date": "2025-03-27",
+      "detections": 11666,
+      "total_frp": 82256.66,
+      "mean_frp": 7.05097376992971
+    },
+    {
+      "date": "2025-03-28",
+      "detections": 11115,
+      "total_frp": 69188.1,
+      "mean_frp": 6.224750337381916
+    },
+    {
+      "date": "2025-03-29",
+      "detections": 11538,
+      "total_frp": 100153.54,
+      "mean_frp": 8.680320679493846
+    },
+    {
+      "date": "2025-03-30",
+      "detections": 9571,
+      "total_frp": 51463.98,
+      "mean_frp": 5.37707449587295
+    },
+    {
+      "date": "2025-03-31",
+      "detections": 8607,
+      "total_frp": 49118.93,
+      "mean_frp": 5.706858371093296
+    }
+  ],
+  "classes": [
+    {
+      "code": 0,
+      "key": "vegetation",
+      "label": "Presumed vegetation fire",
+      "rows": 286722
+    },
+    {
+      "code": 2,
+      "key": "static",
+      "label": "Static thermal source",
+      "rows": 28912
+    },
+    {
+      "code": 3,
+      "key": "offshore",
+      "label": "Offshore thermal source",
+      "rows": 401
+    }
+  ],
+  "provenance": {
+    "name": "India VIIRS S-NPP historical observations, 2025",
+    "primary_source": "NASA FIRMS / VIIRS S-NPP standard processing",
+    "primary_url": "https://firms.modaps.eosdis.nasa.gov/data/country/viirs-snpp/2025/viirs-snpp_2025_India.csv",
+    "download_url": "https://api.github.com/repos/UjjwalKumar7209/sih-2026/contents/SIH_Industrial_Fire_AI/firms_historical_india.csv?ref=30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
+    "mirror_url": "https://github.com/UjjwalKumar7209/sih-2026/blob/30ae6eb05c400b1d40aac7daa4c4a9bbceec667f/SIH_Industrial_Fire_AI/firms_historical_india.csv",
+    "mirror_commit": "30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
+    "mirror_committed_at": "2026-08-28T14:38:24Z",
+    "sha256": "62b397c086bf1934010fd86987506e8aca45d74a9fc0270cd434128a9a9a3db6",
+    "bytes": 24547074,
+    "retrieved_at": "2026-09-05T11:44:06.994835+00:00",
+    "notes": [
+      "Downloaded from a pinned public mirror of a NASA-format FIRMS archive; direct NASA access is unavailable in this sandbox.",
+      "Mirror provenance is disclosed; bit-for-bit equivalence to the primary NASA country archive has not been verified.",
+      "NASA type is an algorithmic source-type label, not a verified incident report. Collection-2 type-field reprocessing status of the mirror is unverified."
+    ]
+  },
+  "date_start": "2025-01-01T06:01:00+00:00",
+  "date_end": "2025-03-31T20:44:00+00:00",
+  "rows": 316035
+}
