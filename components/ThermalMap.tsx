@@ -112,7 +112,7 @@ export default function ThermalMap({ events, region, selected, onSelect, fullScr
   const baseRenderer = useMemo(makeCanvas, []);
   const [countries, setCountries] = useState<FeatureCollection | null>(null);
   const [places, setPlaces] = useState<FeatureCollection | null>(null);
-  const [base, setBase] = useState<'vector' | 'streets'>('vector');
+  const [base, setBase] = useState<'default' | 'satellite' | 'vector'>('default');
   const [layersOpen, setLayersOpen] = useState(false);
   const [showDetections, setShowDetections] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
@@ -138,13 +138,28 @@ export default function ThermalMap({ events, region, selected, onSelect, fullScr
   }, []);
   const referenceVisible = base === 'vector' || tileError;
   return <div className="relative h-full min-h-[380px] isolate overflow-hidden bg-[#1a272f]">
-    <MapContainer center={region.center} zoom={region.zoom} minZoom={3} maxZoom={17} zoomSnap={.25} preferCanvas renderer={baseRenderer} zoomControl={false} attributionControl>
+    <MapContainer center={region.center} zoom={region.zoom} minZoom={3} maxZoom={19} zoomSnap={.25} preferCanvas renderer={baseRenderer} zoomControl={false} attributionControl>
       {referenceVisible && <>
         {countries && <GeoJSON data={countries} style={{ color: '#62737e', weight: showBoundaries ? .7 : 0, opacity: .45, fillColor: '#283842', fillOpacity: 1 }} />}
         <GeoJSON data={grid} style={{ color: '#8b9ca6', weight: .4, opacity: .1, interactive: false }} />
         <PlaceLabels data={places} countries={countries} visible={showLabels} />
       </>}
-      {base === 'streets' && !tileError && <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' eventHandlers={{ tileerror: () => setTileError(true) }} />}
+      {base === 'default' && !tileError && (
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          maxZoom={19}
+          eventHandlers={{ tileerror: () => setTileError(true) }}
+        />
+      )}
+      {base === 'satellite' && !tileError && (
+        <TileLayer
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+          maxZoom={19}
+          eventHandlers={{ tileerror: () => setTileError(true) }}
+        />
+      )}
       <ObservationLayer events={events} visible={showDetections} scaled={scaled} onSelect={onSelect} />
       <InfrastructureLayer features={infrastructure} />
       <MapEffects region={region} selected={selected} fullScreen={fullScreen} reset={reset} />
@@ -155,13 +170,15 @@ export default function ThermalMap({ events, region, selected, onSelect, fullScr
     <div className="absolute top-4 left-4 z-[1000] flex items-start gap-2">
       <div className="relative">
         <button onClick={() => setLayersOpen(!layersOpen)} aria-expanded={layersOpen} className="flex items-center gap-2 rounded-md border border-[#53656e80] bg-[#253640ed] px-3 py-2 text-[11px] font-medium text-[#d3dce1] shadow-sm"><Layers size={13} /> Map layers <ChevronDown size={12} /></button>
-        {layersOpen && <div className="mt-2 w-56 rounded-lg border border-[#465862] bg-[#20313bea] p-3 text-xs text-[#ccd7dd] shadow-xl backdrop-blur">
+        {layersOpen && <div className="mt-2 w-64 rounded-lg border border-[#465862] bg-[#20313bea] p-3 text-xs text-[#ccd7dd] shadow-xl backdrop-blur">
           <div className="mb-2 text-[9px] font-semibold tracking-widest text-[#899eab]">BASEMAP</div>
-          <select aria-label="Select basemap" value={base} onChange={event => { setBase(event.target.value as 'vector' | 'streets'); setTileError(false); }} className="mb-3 w-full rounded border border-[#465b68] bg-[#2c3e49] p-2 text-[11px]">
-            <option value="vector">Natural Earth reference</option><option value="streets">CARTO dark streets · online</option>
+          <select aria-label="Select basemap" value={base} onChange={event => { setBase(event.target.value as 'default' | 'satellite' | 'vector'); setTileError(false); }} className="mb-3 w-full rounded border border-[#465b68] bg-[#2c3e49] p-2 text-[11px]">
+            <option value="default">Default (OpenStreetMap)</option>
+            <option value="satellite">Satellite (Esri World Imagery)</option>
+            <option value="vector">Natural Earth reference</option>
           </select>
           {([['Thermal observations', showDetections, setShowDetections], ['Scale points by FRP', scaled, setScaled], ['Place labels', showLabels, setShowLabels], ['Country boundaries', showBoundaries, setShowBoundaries]] as const).map(([label, checked, set]) => <label className="flex items-center gap-2 py-2" key={label}><input type="checkbox" checked={checked} onChange={event => set(event.target.checked)} />{label}</label>)}
-          <p className="mt-2 border-t border-[#41525e] pt-3 text-[10px] leading-relaxed text-[#8fabb9]">OSM infrastructure appears after a successful evidence query. Boundaries are illustrative.</p>
+          <p className="mt-2 border-t border-[#41525e] pt-3 text-[10px] leading-relaxed text-[#8fabb9]">OSM infrastructure appears after a successful evidence query. Satellite imagery provided by Esri.</p>
         </div>}
       </div>
       <div className="hidden rounded-md border border-[#53656e50] bg-[#253640c9] px-2.5 py-2 text-[10px] text-[#a9bac5] sm:block">VIIRS <span className="mx-1 text-[#526c7b]">/</span> 375 m nominal</div>
@@ -171,11 +188,16 @@ export default function ThermalMap({ events, region, selected, onSelect, fullScr
       <button title={fullScreen ? 'Close expanded map' : 'Expand map'} aria-label={fullScreen ? 'Close expanded map' : 'Expand map'} onClick={onFullScreen} className="rounded-md border border-[#53656e80] bg-[#253640ed] p-2 text-[#c6d4dc]">{fullScreen ? <X size={15} /> : <Maximize2 size={15} />}</button>
     </div>
     <div className="absolute bottom-8 left-4 z-[900] flex flex-wrap gap-x-3 gap-y-2 rounded-md border border-[#52637050] bg-[#1c2c35db] px-3 py-2 text-[9px] font-medium text-[#b9c9d2] backdrop-blur-sm">
-      {(['vegetation', 'static', 'uncertain'] as const).map(key => <span key={key} className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: CLASSES[key].color }} />{CLASSES[key].short}</span>)}
+      {(['industrial', 'forest', 'agriculture', 'persistent', 'uncertain'] as const).map(key => (
+        <span key={key} className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full" style={{ background: CLASSES[key]?.color || '#9ca3af' }} />
+          {CLASSES[key]?.label || key}
+        </span>
+      ))}
     </div>
-    <div className="pointer-events-none absolute bottom-1 left-3 z-[900] max-w-[70%] text-[8px] text-[#8ea2b0]">{referenceVisible ? 'Natural Earth · public domain · illustrative boundaries' : 'Online basemap'} <span className="hidden md:inline"> · {pointer}</span></div>
+    <div className="pointer-events-none absolute bottom-1 left-3 z-[900] max-w-[70%] text-[8px] text-[#8ea2b0]">{base === 'satellite' ? 'Esri World Imagery' : base === 'default' ? '© OpenStreetMap contributors' : 'Natural Earth · public domain'} <span className="hidden md:inline"> · {pointer}</span></div>
     {mapError && <div className="absolute top-16 left-4 z-[900] rounded bg-[#392e2b] px-3 py-2 text-[10px] text-orange-200">Reference geometry unavailable. Coordinate markers remain real.</div>}
-    {tileError && <div className="absolute top-16 left-4 z-[900] rounded bg-[#273e48] px-3 py-2 text-[10px] text-[#c3d6df]">Online tiles unavailable · using genuine Natural Earth geometry</div>}
+    {tileError && <div className="absolute top-16 left-4 z-[900] rounded bg-[#273e48] px-3 py-2 text-[10px] text-[#c3d6df]">Online tiles unavailable · using fallback geometry</div>}
     <div className="pointer-events-none absolute bottom-9 right-4 z-[900] text-right text-[9px] text-[#8ca0ae]"><div className="mb-1 text-base font-light text-[#bac6ce]">↑</div>N</div>
   </div>;
 }

@@ -101,15 +101,18 @@ export class FirmsFeed {
     this.errors = [];
     const results = await Promise.all(sources.map(async source => {
       const publicUrl = `https://firms.modaps.eosdis.nasa.gov/data/active_fire/${source.directory}/csv/${source.prefix}_South_Asia_7d.csv`;
-      const urls = key ? [`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${encodeURIComponent(key)}/${source.code}/60,5,100,40/7`, publicUrl] : [publicUrl];
+      // NASA FIRMS area API restricts day range to [1..5]. 5 days provides maximum NRT coverage without error.
+      const urls = key ? [`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${encodeURIComponent(key)}/${source.code}/60,5,100,40/5`, publicUrl] : [publicUrl];
       for (const url of urls) {
         try {
-          const response = await fetch(url, { headers: { 'User-Agent': 'ThermoScan/0.1 research-prototype', Accept: 'text/csv' }, signal: AbortSignal.timeout(15000) });
+          const response = await fetch(url, { headers: { 'User-Agent': 'ThermoScan/0.1 research-prototype', Accept: 'text/csv' }, signal: AbortSignal.timeout(20000) });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const parsed = parseFirmsCsv(await boundedText(response), 'live');
           // An actual empty NASA CSV is valid. A future-dated record is not live data.
           return parsed.observations.filter(item => Date.parse(item.event.acquiredAt) <= Date.now() + 3600000);
-        } catch { /* Only a real public NASA feed may replace a failed key-based request. */ }
+        } catch (err) {
+          /* Fall back to secondary URL if primary failed */
+        }
       }
       this.errors.push(`${source.name}: upstream connection or CSV validation failed`);
       return null;
@@ -120,16 +123,39 @@ export class FirmsFeed {
       successful.flat().forEach(observation => unique.set(observation.event.id, observation));
       this.observations = [...unique.values()];
       this.lastSuccess = new Date().toISOString();
-      const observedThrough = this.observations.length ? new Date(this.observations.reduce((max, item) => Math.max(max, Date.parse(item.event.acquiredAt)), 0)).toISOString() : null;
-      this.source = { ...this.source, status: this.errors.length ? 'degraded' : 'connected', lastAttempt: this.lastAttempt, lastSuccess: this.lastSuccess, observedThrough,
-        detail: `${successful.length}/3 genuine satellite feeds fetched. ${this.errors.length ? this.errors.join('; ') : 'No fabricated observations. NRT publication has satellite/processing latency.'}` };
+      let minAcq = this.observations[0]?.event.acquiredAt;
+      let maxAcq = this.observations[0]?.event.acquiredAt;
+      for (const obs of this.observations) {
+        if (obs.event.acquiredAt < minAcq) minAcq = obs.event.acquiredAt;
+        if (obs.event.acquiredAt > maxAcq) maxAcq = obs.event.acquiredAt;
+      }
+      this.source = {
+        ...this.source,
+        status: this.errors.length === sources.length ? 'unreachable' : this.errors.length ? 'degraded' : 'connected',
+        lastAttempt: this.lastAttempt,
+        lastSuccess: this.lastSuccess,
+        observedThrough: maxAcq || this.lastSuccess,
+        recordsFetched: this.observations.length,
+        selectedSource: `NASA FIRMS VIIRS (${sources.map(s => s.name).join(', ')})`,
+        acquisitionRange: minAcq && maxAcq ? { from: minAcq, to: maxAcq } : null,
+        error: this.errors.length ? this.errors.join('; ') : null,
+        detail: `${this.observations.length.toLocaleString('en-IN')} genuine live observations fetched across ${successful.length}/3 satellite sensors. NASA FIRMS near-real-time observations.`
+      };
       await fs.mkdir(path.dirname(this.cachePath), { recursive: true });
       const tmp = this.cachePath + '.tmp';
       await fs.writeFile(tmp, JSON.stringify({ fetchedAt: this.lastSuccess, rows: this.observations.map(item => item.raw) }));
       await fs.rename(tmp, this.cachePath);
     } else {
-      this.source = { ...this.source, status: this.observations.length ? 'degraded' : 'unreachable', lastAttempt: this.lastAttempt, lastSuccess: this.lastSuccess,
-        detail: this.observations.length ? 'NASA is unreachable. Showing previously fetched observations with their original acquisition times, not current live data.' : 'Direct NASA connections failed in this environment. Live detections are unavailable; the historical workspace is separate.' };
+      this.source = {
+        ...this.source,
+        status: 'unreachable',
+        lastAttempt: this.lastAttempt,
+        lastSuccess: this.lastSuccess,
+        recordsFetched: 0,
+        selectedSource: `NASA FIRMS VIIRS (${sources.map(s => s.name).join(', ')})`,
+        error: this.errors.join('; ') || 'NASA FIRMS connection failed',
+        detail: 'Live source unavailable. Historical data is not being used as a fallback.'
+      };
     }
   }
 }

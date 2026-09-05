@@ -15,9 +15,10 @@ import hmac
 from pydantic import BaseModel, Field
 import pandas as pd
 import httpx
+import httpx
 import ssl
 from xgboost import XGBClassifier
-from ml.features import normalize, feature_matrix, add_history, CONTEXT_FEATURES
+from ml.features import normalize, feature_matrix, add_history, CONTEXT_FEATURES, calculate_risk, derive_sih_classification
 from ml.connectors import get_context, STAC_URL, HEADERS
 from ml.train import ROOT, ARTIFACTS, DEFAULT_DATA, train
 
@@ -31,7 +32,7 @@ jobs: dict[str, dict] = {}
 @app.middleware("http")
 async def internal_authorization(request: Request, call_next):
     key = os.getenv("INTERNAL_SERVICE_KEY") or os.getenv("ADMIN_API_KEY")
-    if key and request.url.path not in ["/", "/health"] and not hmac.compare_digest(request.headers.get("x-service-key", ""), key):
+    if key and request.url.path not in ["/", "/health", "/sources/probe"] and not hmac.compare_digest(request.headers.get("x-service-key", ""), key):
         return JSONResponse({"detail": "Internal service authentication required"}, status_code=401)
     return await call_next(request)
 
@@ -121,13 +122,45 @@ def predict(request: PredictionRequest):
         class_result = report.get(definition["label"], {})
         poorly_validated = class_result.get("recall", 0) < 0.5 or class_result.get("support", 0) < 30
         abstain = score < threshold or poorly_validated
-        key = "uncertain" if abstain else definition["key"]
-        label = "Needs investigation" if abstain else {"vegetation": "Vegetation fire candidate", "static": "Static source candidate", "offshore": "Offshore source candidate"}[key]
-        results.append({"id": str(row.get("id", row.name)), "classKey": key, "rawClassKey": definition["key"], "label": label,
-                        "score": round(score, 6), "modelId": card["model_id"], "featureMode": card["feature_mode"],
-                        "abstentionReason": "Insufficient held-out evidence for this class" if poorly_validated else "Model score below 0.65" if score < threshold else None,
-                        "probabilities": [{"key": item["key"], "label": item["label"], "score": round(float(values[j]), 6)} for j, item in enumerate(card["classes"])],
-                        "history": {"detections": int(row["prior_detections_30d"]), "activeDays": int(row["prior_active_days_30d"]), "coverageDays": round(float(row["history_coverage_days"]), 2)}})
+        raw_key = "uncertain" if abstain else definition["key"]
+        proba_dict = {item["key"]: float(values[j]) for j, item in enumerate(card["classes"])}
+
+        # Extract contextual factors if available on row
+        dist_m = row.get("industrial_distance_m") or row.get("industrial_distance_capped_m")
+        ndvi_val = row.get("ndvi")
+        ndbi_val = row.get("ndbi")
+        power_nearby = bool(row.get("power_plant_nearby"))
+        landuse_ind = bool(row.get("industrial_landuse_nearby"))
+        frp_val = float(row.get("frp", 0))
+        bright_val = float(row.get("bright_ti4", 300))
+        active_days = float(row.get("prior_active_days_30d", 0))
+        conf_str = str(row.get("confidence", "n"))
+
+        class_key, label, explanation = derive_sih_classification(
+            raw_class=raw_key, proba_dict=proba_dict, frp=frp_val, brightness=bright_val,
+            active_days=active_days, dist_m=dist_m, ndvi=ndvi_val, ndbi=ndbi_val,
+            power_nearby=power_nearby, landuse_ind=landuse_ind, model_score=score
+        )
+
+        risk = calculate_risk(
+            frp=frp_val, brightness=bright_val, confidence=conf_str, category=class_key,
+            dist_m=dist_m, power_nearby=power_nearby, model_score=score
+        )
+
+        results.append({
+            "id": str(row.get("id", row.name)),
+            "classKey": class_key,
+            "rawClassKey": definition["key"],
+            "label": label,
+            "score": round(score, 6),
+            "modelId": card["model_id"],
+            "featureMode": card["feature_mode"],
+            "explanation": explanation,
+            "risk": risk,
+            "abstentionReason": "Insufficient held-out evidence for this class" if poorly_validated else "Model score below 0.65" if score < threshold else None,
+            "probabilities": [{"key": item["key"], "label": item["label"], "score": round(float(values[j]), 6)} for j, item in enumerate(card["classes"])],
+            "history": {"detections": int(row["prior_detections_30d"]), "activeDays": int(row["prior_active_days_30d"]), "coverageDays": round(float(row["history_coverage_days"]), 2)}
+        })
     return {"predictions": results, "quality": quality, "model_id": card["model_id"]}
 
 
@@ -214,17 +247,22 @@ def validate_dataset(dataset_id: str):
 def probe():
     from concurrent.futures import ThreadPoolExecutor
     import os
-    def check(source_id: str, url: str):
+    def check(source_id: str, urls: list[str]):
         attempted = timestamp()
-        try:
-            with httpx.Client(verify=ssl.create_default_context(), timeout=httpx.Timeout(12, connect=6), headers=HEADERS) as client:
-                response = client.get(url)
-                response.raise_for_status()
-            return {"id": source_id, "status": "connected", "lastAttempt": attempted, "lastSuccess": timestamp(), "detail": "Endpoint reachable. Evidence is fetched on demand per observation."}
-        except Exception as exc:
-            return {"id": source_id, "status": "unreachable", "lastAttempt": attempted, "detail": f"Connection failed ({type(exc).__name__}). No substitute values."}
+        last_error = None
+        for url in urls:
+            try:
+                with httpx.Client(verify=ssl.create_default_context(), timeout=httpx.Timeout(8, connect=4), headers=HEADERS) as client:
+                    response = client.get(url)
+                    response.raise_for_status()
+                return {"id": source_id, "status": "connected", "lastAttempt": attempted, "lastSuccess": timestamp(), "detail": "Endpoint reachable. Evidence is fetched on demand per observation."}
+            except Exception as exc:
+                last_error = exc
+        return {"id": source_id, "status": "unreachable", "lastAttempt": attempted, "detail": f"Connection failed ({type(last_error).__name__}). No substitute values."}
+
     with ThreadPoolExecutor(max_workers=2) as executor:
-        sentinel = executor.submit(check, "sentinel", f"{STAC_URL}/collections/sentinel-2-l2a")
-        osm = executor.submit(check, "osm", "https://overpass-api.de/api/status")
+        sentinel = executor.submit(check, "sentinel", [f"{STAC_URL}/collections/sentinel-2-l2a"])
+        osm = executor.submit(check, "osm", ["https://overpass-api.de/api/status", "https://lz4.overpass-api.de/api/status"])
         return {"sources": [sentinel.result(), osm.result(), {"id": "worldpop", "status": "idle" if os.getenv("WORLDPOP_RASTER_URL") else "not_configured",
                         "detail": "Population raster configured; sampled on demand" if os.getenv("WORLDPOP_RASTER_URL") else "Optional population-count raster has not been configured. Exposure is unknown."}]}
+

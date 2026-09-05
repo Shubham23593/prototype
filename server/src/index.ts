@@ -21,7 +21,7 @@ const engine = new Engine();
 const strictDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value, 'Invalid calendar date');
 const querySchema = z.object({
   mode: z.enum(['archive', 'live']).default('archive'), region: z.string().refine(value => REGIONS.some(region => region.id === value), 'Unknown region').default('india'),
-  window: z.enum(['24h', '48h', '7d']).default('24h'), classKey: z.enum(['all', 'vegetation', 'static', 'offshore', 'uncertain', 'unclassified']).default('all'),
+  window: z.enum(['24h', '48h', '7d']).default('24h'), classKey: z.enum(['all', 'industrial', 'forest', 'agriculture', 'persistent', 'uncertain', 'unclassified', 'vegetation', 'static', 'offshore']).default('all'),
   from: strictDate.optional(), to: strictDate.optional(), q: z.string().max(100).optional(),
 }).refine(value => Boolean(value.from) === Boolean(value.to), 'Provide both from and to dates')
   .refine(value => !value.from || !value.to || (value.from <= value.to && Date.parse(value.to) - Date.parse(value.from) <= 6 * 86400000), 'Select a date range of up to seven calendar days');
@@ -58,8 +58,18 @@ app.get('/api/health', async (_req, res) => {
   res.json({ status: 'ready', version: '0.1.0', now: new Date().toISOString(), defaultMode: process.env.DEFAULT_DATA_MODE === 'live' ? 'live' : 'archive',
     model: engine.modelState, archiveAvailable: engine.archive.length > 0, sources: engine.sources(), mutationAuthRequired: Boolean(process.env.ADMIN_API_KEY) });
 });
-app.get('/api/sources', (_req, res) => res.json({ sources: engine.sources(), checkedAt: new Date().toISOString(), publicFeedsNeedKey: false, mutationAuthRequired: Boolean(process.env.ADMIN_API_KEY) }));
-app.post('/api/sources/check', authorize, expensiveLimit, async (_req, res) => { await engine.checkSources(true); res.json({ sources: engine.sources(), checkedAt: new Date().toISOString() }); });
+app.get('/api/sources', async (_req, res) => {
+  await engine.checkModel();
+  if (engine.contextSources.some(s => s.status !== 'connected' && s.id !== 'worldpop')) {
+    await engine.checkSources().catch(() => {});
+  }
+  res.json({ sources: engine.sources(), checkedAt: new Date().toISOString(), publicFeedsNeedKey: false, mutationAuthRequired: Boolean(process.env.ADMIN_API_KEY) });
+});
+app.post('/api/sources/check', expensiveLimit, async (_req, res) => { await engine.checkSources(true); res.json({ sources: engine.sources(), checkedAt: new Date().toISOString() }); });
+app.post('/api/sources/firms/refresh', expensiveLimit, async (_req, res) => {
+  await engine.firms.refresh(true);
+  res.json({ source: engine.firms.source, count: engine.firms.observations.length, checkedAt: new Date().toISOString() });
+});
 app.get('/api/overview', async (req, res) => { res.json(await engine.overview(filters(req))); });
 app.get('/api/observations', async (req, res) => {
   const options = z.object({ page: z.coerce.number().int().min(1).max(100000).default(1), pageSize: z.coerce.number().int().min(1).max(100).default(12), sort: z.enum(['recent', 'frp', 'score']).default('recent') }).parse(req.query);
@@ -158,7 +168,16 @@ async function main() {
   await engine.initialize();
   const port = Number(process.env.API_PORT || 4000);
   const server = app.listen(port, '0.0.0.0', () => console.log(`ThermoScan API listening on 0.0.0.0:${port}. Historical rows: ${engine.archive.length}.`));
-  engine.checkSources().catch(error => console.error('Source checks could not finish:', error.message));
+  // Startup probe with retry until Python ML service is listening
+  (async () => {
+    for (let i = 0; i < 5; i++) {
+      try {
+        await engine.checkSources();
+        if (engine.contextSources.filter(s => s.status === 'connected').length >= 2) break;
+      } catch {}
+      await new Promise(resolve => setTimeout(resolve, 2500));
+    }
+  })().catch(error => console.error('Source checks could not finish:', error.message));
   const pollMinutes = Math.max(5, Number(process.env.POLL_INTERVAL_MINUTES) || 15);
   const poller = setInterval(() => engine.checkSources().catch(() => {}), pollMinutes * 60000);
   poller.unref();

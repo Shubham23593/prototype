@@ -1,7 +1,7 @@
 'use client';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
-import { ArrowDownRight, ArrowRight, BarChart3, ChevronRight, CircleHelp, Factory, Flame, Focus, LoaderCircle, Radio, ScanLine, TrendingUp, Zap } from 'lucide-react';
+import { Activity, ArrowDownRight, ArrowRight, BarChart3, ChevronRight, CircleHelp, Factory, Flame, Focus, Leaf, LoaderCircle, Radio, ScanLine, ShieldAlert, TrendingUp, Zap } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Evidence, Overview, Page, Region, ThermalEvent } from '@/lib/types';
 import { CLASSES, coordinates, formatDate, formatNumber, formatTime } from '@/lib/constants';
@@ -37,11 +37,14 @@ export default function OverviewView({ data, loading, region, selected, onSelect
   let cumulative = 0;
   const gradient = distribution.map(item => { const from = cumulative; cumulative += item.value / Math.max(data?.total || 0, 1) * 360; return `${item.color} ${from}deg ${cumulative}deg`; }).join(', ');
   return <div>
-    <section aria-label="Observation metrics" className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
-      <Metric label="Thermal detections" value={stats?.detections || 0} detail="Observed satellite pixels" icon={<ScanLine size={16} />} color="#e48d53" values={timeline.map(item => item.detections)} available={available} help="Counts are actual FIRMS pixels in the selected region and time window, not independent fire incidents." />
-      <Metric label="Static source candidates" value={stats?.staticCandidates || 0} detail="XGBoost source-type inference" icon={<Factory size={16} />} color="#9985c7" values={timeline.map(item => item.static)} available={available && Boolean(data?.model.available)} help="NASA static-source class predicted by the model. Not confirmed industrial fires or proof of long-term persistence." />
-      <Metric label="High-FRP observations" value={stats?.highFrp || 0} detail="≥ 50 MW · review priority" icon={<Flame size={16} />} color="#dc785b" values={timeline.map(item => item.highFrp)} available={available} help="A transparent radiative-power threshold, not a validated risk score. High FRP does not identify a source or establish an emergency." />
-      <Metric label="Mean radiative power" value={stats?.meanFrp || 0} unit="MW" detail="Measured fire radiative power" icon={<Zap size={16} />} color="#78a8b6" values={timeline.map(item => item.meanFrp)} available={available && Boolean(stats?.detections)} help="Average FIRMS fire radiative power in megawatts. This is not a source temperature or total emitted heat." />
+    <section aria-label="Observation metrics" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 xl:gap-3">
+      <Metric label="Total observations" value={stats?.detections || 0} detail="Observed satellite pixels" icon={<ScanLine size={15} />} color="#e48d53" values={timeline.map(item => item.detections)} available={available} help="Total NASA FIRMS VIIRS hotspot detections in the selected spatial/temporal window." />
+      <Metric label="Potential industrial" value={stats?.industrialCandidates || 0} detail="Close to mapped facilities" icon={<Factory size={15} />} color="#d9534f" values={[]} available={available && Boolean(data?.model.available)} help="Thermal anomalies situated near mapped industrial infrastructure or land-use with non-persistent fire characteristics." />
+      <Metric label="Persistent sources" value={stats?.persistentCandidates || 0} detail="Recurrent heat signature" icon={<Flame size={15} />} color="#9985c7" values={timeline.map(item => item.static)} available={available && Boolean(data?.model.available)} help="High-recurrence anomalies at stable locations, characteristic of industrial furnaces, flare stacks, or kilns." />
+      <Metric label="High priority" value={stats?.highPriority || 0} detail="Elevated risk score" icon={<ShieldAlert size={15} />} color="#c9622d" values={[]} available={available} help="Hotspots with high risk index based on Hazard × Exposure × Confidence." />
+      <Metric label="Forest / natural" value={stats?.forestCandidates || 0} detail="Vegetation land cover" icon={<Leaf size={15} />} color="#5c9a72" values={[]} available={available && Boolean(data?.model.available)} help="Detections in natural forest or wilderness areas away from heavy industrial infrastructure." />
+      <Metric label="Agricultural / waste" value={stats?.agriCandidates || 0} detail="Cropland & crop residue" icon={<Activity size={15} />} color="#c49a45" values={[]} available={available && Boolean(data?.model.available)} help="Seasonal agricultural burning, crop residue clearing, or open biomass combustion." />
+      <Metric label="Mean FRP" value={stats?.meanFrp || 0} unit="MW" detail="Fire radiative power" icon={<Zap size={15} />} color="#78a8b6" values={timeline.map(item => item.meanFrp)} available={available && Boolean(stats?.detections)} help="Average Fire Radiative Power (MW) across mapped detections." />
     </section>
 
     <div className="mt-5 grid gap-4 min-[1200px]:grid-cols-[minmax(0,1fr)_300px] min-[1500px]:grid-cols-[minmax(0,1fr)_325px]">

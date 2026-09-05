@@ -8,7 +8,7 @@
   "mirror_commit": "30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
   "sha256": "62b397c086bf1934010fd86987506e8aca45d74a9fc0270cd434128a9a9a3db6",
   "bytes": 24547074,
-  "retrieved_at": "2026-09-05T12:28:02.276439+00:00",
+  "retrieved_at": "2026-09-05T13:53:02.373937+00:00",
   "notes": [
     "NASA type is an algorithmic source-type label, not an independently verified incident label.",
     "Collection-2 type-field reprocessing status is unverified for the mirror. Request freshly reprocessed standard data before scientific use.",

@@ -5,9 +5,30 @@ import { CLASSES } from '@/lib/constants';
 import type { ClassKey, SourceState } from '@/lib/types';
 
 export function ClassBadge({ classKey, compact = false }: {classKey: ClassKey; compact?: boolean}) {
-  const config = CLASSES[classKey];
+  const config = CLASSES[classKey] || CLASSES.uncertain;
   return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 font-medium ${compact ? 'text-[10px]' : 'text-[11px]'}`} style={{ color: config.color, background: config.bg }}><span className="h-1.5 w-1.5 rounded-full" style={{background: config.color}} />{config.short}</span>;
 }
+
+export function RiskBadge({ level, compact = false }: {level?: 'low' | 'medium' | 'high' | 'critical'; compact?: boolean}) {
+  if (!level) return <span className="text-[10px] text-[#99a7b0]">—</span>;
+  const styles: Record<string, { label: string; text: string; bg: string; border: string }> = {
+    critical: { label: 'Critical', text: '#d94828', bg: '#fff0ec', border: '#fbcbb8' },
+    high: { label: 'High', text: '#c9622d', bg: '#fff4eb', border: '#fed7ba' },
+    medium: { label: 'Medium', text: '#ab8339', bg: '#fdf7ec', border: '#f2deae' },
+    low: { label: 'Low', text: '#4d866a', bg: '#eff8f3', border: '#c8e4d3' },
+  };
+  const cfg = styles[level] || styles.low;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-md border font-medium ${compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[10px]'}`}
+      style={{ color: cfg.text, background: cfg.bg, borderColor: cfg.border }}
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: cfg.text }} />
+      {cfg.label}
+    </span>
+  );
+}
+
 const stateLabels: Record<SourceState, string> = { connected: 'Connected', unreachable: 'Unavailable', not_configured: 'Not configured', idle: 'On demand', local: 'Local journal', degraded: 'Degraded' };
 export function StatusBadge({ state }: {state: SourceState}) {
   const style = state === 'connected' ? 'text-[#28856a] bg-[#eaf6f0]' : ['unreachable', 'degraded'].includes(state) ? 'text-[#bd8050] bg-[#fff4e7]' : 'text-[#75818c] bg-[#eff2f5]';

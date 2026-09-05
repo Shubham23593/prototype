@@ -68,6 +68,81 @@ export default function ModelView({ refresh, imported, onPage, onModelChanged, n
     </div>
     <section className="panel p-6"><div className="grid gap-6 lg:grid-cols-2"><div><h3 className="flex items-center gap-2 text-xs font-semibold"><GitBranch size={15} className="text-[#98a9b5]" />Reproducible, leakage-aware split</h3><dl className="mt-4 space-y-3 text-[10px]"><div className="flex justify-between gap-3"><dt className="text-[#9cabb5]">Chronological cutoff</dt><dd className="text-[#7c929f]">{formatDate(data.split.cutoff)}</dd></div><div className="flex justify-between gap-3"><dt className="text-[#9cabb5]">Spatial blocks</dt><dd className="text-[#7c929f]">0.1° · {formatNumber(data.split.train_blocks)} train / {formatNumber(data.split.test_blocks)} test</dd></div><div className="flex justify-between gap-3"><dt className="text-[#9cabb5]">Overlapping train/test blocks</dt><dd className="font-semibold text-[#84a090]">{data.split.overlapping_blocks}</dd></div><div className="flex justify-between gap-3"><dt className="text-[#9cabb5]">Holdout used for hyperparameter tuning</dt><dd className="text-[#7c929f]">{data.split.test_used_for_tuning?'Yes':'No'}</dd></div></dl><p className="mt-4 text-[9px] leading-6 text-[#a2afb8]">{data.split.history}</p></div><div><div className="flex items-center justify-between"><h3 className="text-xs font-semibold">Reproduce from the real source</h3><button aria-label="Copy training commands" className="icon-button" onClick={()=>navigator.clipboard.writeText('npm run data:download\nnpm run model:train').then(()=>notify('Training commands copied.')).catch(()=>notify('Clipboard is unavailable. Select and copy the commands below.',true))}><Copy size={13} /></button></div><pre className="mt-3 overflow-x-auto rounded-lg bg-[#263741] p-4 font-mono text-[10px] leading-7 text-[#acbeca]"><span className="text-[#758e9e]"># Pinned, checksum-verified historical mirror</span>{'\n'}npm run data:download{'\n'}npm run model:train</pre><button onClick={()=>onPage('history')} className="mt-3 inline-flex items-center gap-2 text-[10px] text-[#b18f71]">Import a freshly reprocessed NASA archive<ArrowRight size={12} /></button></div></div></section>
     <section className="panel p-6"><h3 className="text-xs font-semibold">Limitations you should know</h3><ul className="mt-4 grid gap-x-8 gap-y-3 lg:grid-cols-2">{data.warnings.map(warning=><li className="flex items-start gap-2 text-[10px] leading-6 text-[#97a7b2]" key={warning}><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#c8b29a]" />{warning}</li>)}</ul></section>
-    {trainModal && <Modal title="Train on real historical observations" onClose={()=>!starting&&setTrainModal(false)}><p className="text-xs leading-6 text-[#8b9ca8]">This runs Python feature engineering, a real XGBoost fit, and untouched holdout evaluation. It replaces the active research model only after validation succeeds.</p><label className="mt-5 block text-[10px] font-medium text-[#91a2ae]" htmlFor="training-dataset">Training archive</label><select id="training-dataset" className="field mt-2" value={dataset} onChange={event=>{setDataset(event.target.value);setWithContext(false);}}><option value="default">Pinned India archive · Jan–Mar 2025</option>{imported&&<option value={imported.dataset_id}>{imported.name} · {formatNumber(imported.rows)} rows</option>}</select><label className="mt-4 flex items-start gap-2 text-[10px] leading-5 text-[#91a2ae]"><input type="checkbox" className="mt-1" disabled={dataset==='default'||!imported?.columns.includes('ndvi')} checked={withContext} onChange={event=>setWithContext(event.target.checked)} /><span>Use measured Sentinel-2 + OSM columns when present. Requires at least 60% measured feature coverage; otherwise training fails explicitly.</span></label><p className="mt-4 rounded-lg bg-[#fff9f2] p-3 text-[10px] leading-5 text-[#b09a80]">A CSV without genuine NASA type labels cannot train this baseline. At least 500 valid observations, 30 calendar days, and independently held-out locations are required.</p>{trainError&&<div className="mt-4"><ErrorState message={trainError}/></div>}<div className="mt-6 flex justify-end gap-2"><button className="btn-secondary" disabled={starting} onClick={()=>setTrainModal(false)}>Cancel</button><button className="btn-primary" disabled={starting} onClick={train}>{starting?<LoaderCircle className="animate-spin" size={13}/>:<Play size={12}/>}Start actual training</button></div></Modal>}
+    {trainModal && <Modal title="Train XGBoost on real observations" onClose={()=>!starting&&setTrainModal(false)}>
+      <p className="text-xs leading-6 text-[#8b9ca8]">Run Python feature engineering, leak-free spatial/chronological holdout evaluation, and training of a real XGBoost artifact without synthetic data.</p>
+      
+      <div className="mt-5 space-y-4">
+        <div>
+          <label className="block text-[10px] font-medium text-[#91a2ae]" htmlFor="training-dataset">Selected training archive</label>
+          <select id="training-dataset" className="field mt-1.5" value={dataset} onChange={event=>{setDataset(event.target.value);}}>
+            <option value="default">Pinned India archive · Jan–Mar 2025 ({formatNumber(data.dataset.rows)} rows)</option>
+            {imported&&<option value={imported.dataset_id}>{imported.name} · {formatNumber(imported.rows)} rows</option>}
+          </select>
+        </div>
+
+        <div>
+          <span className="block text-[10px] font-medium text-[#91a2ae]">Model type</span>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setWithContext(false)}
+              className={`rounded-lg border p-3 text-left transition-all ${!withContext ? 'border-[#dfa47d] bg-[#fdf9f4]' : 'border-[#e4e9ec] bg-white hover:bg-[#fafbfc]'}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[#485764]">A. Thermal baseline</span>
+                {!withContext && <span className="h-1.5 w-1.5 rounded-full bg-[#dfa47d]" />}
+              </div>
+              <p className="mt-1 text-[9px] leading-4 text-[#8a99a4]">FIRMS thermal + 750m 30-day temporal recurrence features</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setWithContext(true)}
+              className={`rounded-lg border p-3 text-left transition-all ${withContext ? 'border-[#dfa47d] bg-[#fdf9f4]' : 'border-[#e4e9ec] bg-white hover:bg-[#fafbfc]'}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[#485764]">B. Multi-source fused</span>
+                {withContext && <span className="h-1.5 w-1.5 rounded-full bg-[#dfa47d]" />}
+              </div>
+              <p className="mt-1 text-[9px] leading-4 text-[#8a99a4]">Thermal + Recurrence + Sentinel-2 NDVI/NDBI + OSM features</p>
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-[#e5eaee] bg-[#f8fafb] p-3.5 text-[10px]">
+          <div className="flex justify-between py-1 border-b border-[#edf1f4]">
+            <span className="text-[#8c9ca8]">Archive observations</span>
+            <span className="font-semibold text-[#495864]">{formatNumber(dataset==='default' ? data.dataset.rows : imported?.rows || 0)}</span>
+          </div>
+          <div className="flex justify-between py-1 border-b border-[#edf1f4]">
+            <span className="text-[#8c9ca8]">Sentinel-2 context coverage</span>
+            <span className="font-semibold text-[#495864]">{dataset==='default' ? 'On-demand / In-archive: 0%' : imported?.columns.includes('ndvi') ? 'Enriched archive' : 'Missing (0%)'}</span>
+          </div>
+          <div className="flex justify-between py-1 border-b border-[#edf1f4]">
+            <span className="text-[#8c9ca8]">OSM infrastructure coverage</span>
+            <span className="font-semibold text-[#495864]">{dataset==='default' ? 'On-demand / In-archive: 0%' : imported?.columns.includes('industrial_distance_m') ? 'Enriched archive' : 'Missing (0%)'}</span>
+          </div>
+          <div className="flex justify-between py-1">
+            <span className="text-[#8c9ca8]">Active model ID</span>
+            <span className="font-mono text-[9px] text-[#697a86]">{data.model_id}</span>
+          </div>
+        </div>
+
+        {withContext && dataset === 'default' && (
+          <div className="rounded-lg border border-[#f3d9c7] bg-[#fff6f0] p-3 text-[10px] leading-5 text-[#b0673d]">
+            <strong>Coverage warning:</strong> The default baseline archive contains raw NASA FIRMS detections without pre-extracted Sentinel-2 or OSM columns. Multi-source fused training requires an enriched archive with at least 60% real measured coverage across all contextual features. Select <em>A. Thermal baseline</em> or upload an enriched dataset in Historical data.
+          </div>
+        )}
+      </div>
+
+      {trainError&&<div className="mt-4"><ErrorState message={trainError}/></div>}
+      <div className="mt-6 flex justify-end gap-2">
+        <button className="btn-secondary" disabled={starting} onClick={()=>setTrainModal(false)}>Cancel</button>
+        <button className="btn-primary" disabled={starting || (withContext && dataset==='default')} onClick={train}>
+          {starting?<LoaderCircle className="animate-spin" size={13}/>:<Play size={12}/>}
+          Start {withContext ? 'fused' : 'baseline'} training
+        </button>
+      </div>
+    </Modal>}
   </div>;
 }

@@ -57,9 +57,17 @@ export class Engine {
     await Promise.all([
       this.firms.refresh(force).catch(() => {}),
       this.checkModel(true),
-      mlRequest<{ sources: SourceStatus[] }>('/sources/probe', undefined, 30000).then(result => {
-        this.contextSources = this.contextSources.map(source => ({ ...source, ...result.sources.find(item => item.id === source.id) }));
-      }).catch(() => { this.contextSources = this.contextSources.map(source => source.id === 'worldpop' ? source : { ...source, status: 'unreachable', detail: 'Python context service is unavailable. No context values have been substituted.' }); }),
+      mlRequest<{ sources: SourceStatus[] }>('/sources/probe', undefined, 25000).then(result => {
+        if (result?.sources) {
+          this.contextSources = this.contextSources.map(source => ({ ...source, ...result.sources.find(item => item.id === source.id) }));
+        }
+      }).catch(err => {
+        console.warn('Context source probe warning:', err?.message || err);
+        this.contextSources = this.contextSources.map(source =>
+          source.status === 'connected' ? source :
+          source.id === 'worldpop' ? source : { ...source, status: 'unreachable', detail: 'Python context service is unavailable. No context values have been substituted.' }
+        );
+      }),
     ]);
   }
 
@@ -87,19 +95,16 @@ export class Engine {
     if (!missing.length) return;
     this.inference = (async () => {
       try {
-        if (!precomputed) {
-          // A single call supplies the complete live history. Chunking it would
-          // incorrectly reset past-neighbour features at every chunk boundary.
-          if (observations.length > 80000) throw new Error('Live inference limit exceeded; narrow the ingestion region before inference.');
-          const result = await mlRequest<{predictions: (Prediction & {id: string; history: ThermalEvent['history']})[]}>('/predict', { observations: observations.map(item => item.raw), use_precomputed_history: false }, 120000);
+        const chunkSize = 15000;
+        for (let start = 0; start < missing.length; start += chunkSize) {
+          const chunk = missing.slice(start, start + chunkSize);
+          const result = await mlRequest<{predictions: (Prediction & {id: string; history: ThermalEvent['history']})[]}>('/predict', {
+            observations: chunk.map(item => item.raw),
+            use_precomputed_history: precomputed
+          }, 120000);
           result.predictions.forEach(item => this.predictions.set(item.id, item));
-        } else {
-          for (let start = 0; start < missing.length; start += 12000) {
-            const chunk = missing.slice(start, start + 12000);
-            const result = await mlRequest<{predictions: (Prediction & {id: string; history: ThermalEvent['history']})[]}>('/predict', { observations: chunk.map(item => item.raw), use_precomputed_history: true }, 60000);
-            result.predictions.forEach(item => this.predictions.set(item.id, item));
-          }
         }
+        this.modelState = { ...this.modelState, available: true, error: null };
         await this.store.persistObservations(observations.map(item => this.decorate(item)));
       } catch (error) {
         this.modelState = { ...this.modelState, available: false, error: error instanceof Error ? error.message : 'Inference failed' };
@@ -110,24 +115,41 @@ export class Engine {
 
   private decorate(observation: Observation): ThermalEvent {
     const prediction = this.modelState.available ? this.predictions.get(observation.event.id) : undefined;
-    return { ...observation.event, prediction: prediction ? { classKey: prediction.classKey, rawClassKey: prediction.rawClassKey, label: prediction.label, score: prediction.score,
-      modelId: prediction.modelId, featureMode: prediction.featureMode, abstentionReason: prediction.abstentionReason, probabilities: prediction.probabilities } : observation.event.prediction,
-      history: prediction?.history || observation.event.history, review: this.store.getReview(observation.event.id) };
+    return {
+      ...observation.event,
+      risk: prediction?.risk,
+      prediction: prediction ? {
+        classKey: prediction.classKey,
+        rawClassKey: prediction.rawClassKey,
+        label: prediction.label,
+        score: prediction.score,
+        modelId: prediction.modelId,
+        featureMode: prediction.featureMode,
+        explanation: prediction.explanation,
+        risk: prediction.risk,
+        abstentionReason: prediction.abstentionReason,
+        probabilities: prediction.probabilities
+      } : observation.event.prediction,
+      history: prediction?.history || observation.event.history,
+      review: this.store.getReview(observation.event.id)
+    };
   }
 
   async query(filters: Filters): Promise<{events: ThermalEvent[]; overview: Omit<Overview, 'events' | 'total' | 'truncated' | 'mapLimit' | 'stats' | 'distribution' | 'timeline'>}> {
     if (filters.mode === 'live') await this.firms.refresh();
     const data = filters.mode === 'archive' ? this.archive : this.firms.observations;
-    await this.classify(data, filters.mode === 'archive');
     const region = REGIONS.find(region => region.id === filters.region) || REGIONS[0];
+    const [west, south, east, north] = region.bbox;
+
+    const regionalData = data.filter(({ event }) => event.latitude >= south && event.latitude <= north && event.longitude >= west && event.longitude <= east);
+
+    await this.classify(regionalData, filters.mode === 'archive');
     let availableFrom: string | null = null, availableTo: string | null = null;
     for (const item of data) {
       const time = item.event.acquiredAt;
       if (!availableFrom || time < availableFrom) availableFrom = time;
       if (!availableTo || time > availableTo) availableTo = time;
     }
-    // Historic windows anchor to the source date, never the wall clock. Live
-    // windows anchor to now, so last year's cache cannot masquerade as recent.
     const anchor = filters.mode === 'archive' ? (availableTo ? Date.parse(availableTo) : Date.now()) : Date.now();
     const hours = { '24h': 24, '48h': 48, '7d': 168 }[filters.window];
     let start = filters.from ? Date.parse(filters.from + 'T00:00:00Z') : anchor - hours * 3600000;
@@ -138,7 +160,6 @@ export class Engine {
       }
       start = Math.max(start, Date.parse(availableFrom.slice(0, 10) + 'T00:00:00Z'));
     }
-    const [west, south, east, north] = region.bbox;
     let events = data.filter(({ event }) => event.latitude >= south && event.latitude <= north && event.longitude >= west && event.longitude <= east
       && Date.parse(event.acquiredAt) >= start && Date.parse(event.acquiredAt) <= end).map(item => this.decorate(item));
     if (filters.classKey !== 'all') events = events.filter(event => event.prediction.classKey === filters.classKey);
@@ -147,15 +168,16 @@ export class Engine {
       events = events.filter(event => [event.id, String(event.latitude), String(event.longitude), event.prediction.label, event.satellite].some(value => value.toLowerCase().includes(search)));
     }
     const archive = filters.mode === 'archive';
-    const stale = !archive && (this.firms.source.status !== 'connected' || !this.firms.lastSuccess || Date.now() - Date.parse(this.firms.lastSuccess) > 90 * 60000 || (!!availableTo && Date.now() - Date.parse(availableTo) > 24 * 3600000));
-    const availability = !data.length && (archive ? !!this.archiveError : this.firms.source.status === 'unreachable') ? 'unavailable' : stale ? 'stale' : 'ready';
-    const overview = { mode: filters.mode, availability, notice: archive ?
-      'Real historical FIRMS observations · 25–31 March 2025. This is archive analysis, not a live feed. Model outputs are source-type candidates, not confirmed incidents.' :
-      availability === 'unavailable' ? 'NASA cannot be reached from this environment. No live observations are available. Open the separately labelled historical workspace to analyze real archived data.' :
-      stale ? 'Live feed is partial, delayed, or currently unreachable. Only real cached observations within the selected current-time window are shown; inspect source freshness.' :
-      'Real NASA near-real-time detections. Satellite overpasses and processing introduce latency; this is not continuous monitoring or an emergency dispatch system.',
+    const stale = !archive && (this.firms.source.status !== 'connected' || !this.firms.lastSuccess || Date.now() - Date.parse(this.firms.lastSuccess) > 90 * 60000);
+    const availability = (!data.length && filters.mode === 'live') || (!data.length && archive && !!this.archiveError) ? 'unavailable' : stale ? 'stale' : 'ready';
+    const notice = archive ?
+      'Real historical NASA FIRMS observations · 25–31 March 2025 archive. This is historical analysis, not a live feed.' :
+      availability === 'unavailable' ? 'Live source unavailable. Historical data is not being used as a fallback.' :
+      stale ? 'Live feed is delayed or currently unreachable. Inspect source freshness.' :
+      'NASA FIRMS near-real-time observations. Satellite overpasses and processing introduce nominal latency; this is not continuous sensor monitoring.';
+    const overview = { mode: filters.mode, availability, notice,
       range: { from: new Date(start).toISOString(), to: new Date(end).toISOString(), availableFrom, availableTo },
-      source: { name: archive ? 'NASA FIRMS · attributed historical mirror' : 'NASA FIRMS · VIIRS NRT',
+      source: { name: archive ? 'NASA FIRMS · attributed historical mirror' : 'NASA FIRMS near-real-time observations',
         url: archive ? this.archiveMeta?.source?.mirror_url || 'https://firms.modaps.eosdis.nasa.gov/download/' : this.firms.source.url!,
         retrievedAt: archive ? this.archiveMeta?.source?.retrieved_at || null : this.firms.lastSuccess,
         lastAttempt: archive ? null : this.firms.lastAttempt, sha256: archive ? this.archiveMeta?.source_sha256 : undefined },
@@ -165,7 +187,13 @@ export class Engine {
 
   async overview(filters: Filters): Promise<Overview & {latest: ThermalEvent[]}> {
     const { events, overview } = await this.query(filters);
-    const distribution = (Object.keys(CLASSES) as ClassKey[]).map(key => ({ key, name: CLASSES[key].short, value: events.filter(event => event.prediction.classKey === key).length, color: CLASSES[key].color }));
+    const distributionKeys: ClassKey[] = ['industrial', 'forest', 'agriculture', 'persistent', 'uncertain'];
+    const distribution = distributionKeys.map(key => ({
+      key,
+      name: CLASSES[key]?.short || key,
+      value: events.filter(event => event.prediction.classKey === key).length,
+      color: CLASSES[key]?.color || '#6b7280'
+    }));
     const bins = new Map<string, {date: string; detections: number; static: number; highFrp: number; meanFrp: number}>();
     if (overview.range.from && overview.range.to) {
       for (let day = Date.parse(overview.range.from.slice(0, 10)); day <= Date.parse(overview.range.to.slice(0, 10)); day += 86400000) {
@@ -176,18 +204,40 @@ export class Engine {
     for (const event of events) {
       const key = event.acquiredAt.slice(0, 10);
       const bin = bins.get(key) || { date: key, detections: 0, static: 0, highFrp: 0, meanFrp: 0 };
-      bin.detections++; bin.static += event.prediction.classKey === 'static' ? 1 : 0; bin.highFrp += event.frp >= 50 ? 1 : 0; bin.meanFrp += event.frp;
+      bin.detections++;
+      bin.static += (event.prediction.classKey === 'persistent' || (event.prediction.classKey as string) === 'static') ? 1 : 0;
+      bin.highFrp += event.frp >= 50 ? 1 : 0;
+      bin.meanFrp += event.frp;
       bins.set(key, bin);
     }
     const totalFrp = events.reduce((sum, event) => sum + event.frp, 0);
     const mapLimit = 3500;
     const mapped = [...events].sort((a, b) => b.frp - a.frp || b.acquiredAt.localeCompare(a.acquiredAt)).slice(0, mapLimit);
     const latest = [...events].sort((a, b) => b.acquiredAt.localeCompare(a.acquiredAt) || b.frp - a.frp).slice(0, 20);
-    return { ...overview, events: mapped, latest, total: events.length, mapLimit, truncated: events.length > mapLimit,
-      stats: { detections: events.length, staticCandidates: distribution.find(item => item.key === 'static')!.value, highFrp: events.filter(event => event.frp >= 50).length,
-        meanFrp: events.length ? totalFrp / events.length : 0, totalFrp, uncertain: distribution.find(item => item.key === 'uncertain')!.value,
-        reviewed: events.filter(event => event.review?.state === 'reviewed').length },
-      distribution, timeline: [...bins.values()].sort((a,b) => a.date.localeCompare(b.date)).map(bin => ({ ...bin, meanFrp: bin.detections ? bin.meanFrp / bin.detections : 0 })) };
+    return {
+      ...overview,
+      events: mapped,
+      latest,
+      total: events.length,
+      mapLimit,
+      truncated: events.length > mapLimit,
+      stats: {
+        detections: events.length,
+        industrialCandidates: events.filter(e => e.prediction.classKey === 'industrial').length,
+        forestCandidates: events.filter(e => e.prediction.classKey === 'forest' || (e.prediction.classKey as string) === 'vegetation').length,
+        agricultureCandidates: events.filter(e => e.prediction.classKey === 'agriculture').length,
+        persistentCandidates: events.filter(e => e.prediction.classKey === 'persistent' || (e.prediction.classKey as string) === 'static').length,
+        uncertain: events.filter(e => e.prediction.classKey === 'uncertain').length,
+        highPriority: events.filter(e => e.prediction.risk?.level === 'high' || e.prediction.risk?.level === 'critical').length,
+        staticCandidates: events.filter(e => e.prediction.classKey === 'persistent' || (e.prediction.classKey as string) === 'static').length,
+        highFrp: events.filter(event => event.frp >= 50).length,
+        meanFrp: events.length ? totalFrp / events.length : 0,
+        totalFrp,
+        reviewed: events.filter(event => event.review?.state === 'reviewed').length
+      },
+      distribution,
+      timeline: [...bins.values()].sort((a,b) => a.date.localeCompare(b.date)).map(bin => ({ ...bin, meanFrp: bin.detections ? bin.meanFrp / bin.detections : 0 }))
+    };
   }
 
   async findEvent(id: string): Promise<ThermalEvent | null> {
@@ -198,20 +248,46 @@ export class Engine {
   }
 
   async scoreMeasuredContext(event: ThermalEvent, evidence: Evidence): Promise<Prediction | undefined> {
-    if (!this.modelState.featureMode?.includes('measured context')) return;
-    if (evidence.osm.status !== 'ready' || evidence.sentinel.status !== 'ready' || !event.history) return;
-    if (!Number.isFinite(evidence.sentinel.ndvi) || !Number.isFinite(evidence.sentinel.ndbi) || typeof evidence.osm.industrial_within_1000m !== 'number') return;
     const observation = this.archive.find(item => item.event.id === event.id) || this.firms.observations.find(item => item.event.id === event.id);
     if (!observation) return;
-    const raw = { ...observation.raw, ndvi: evidence.sentinel.ndvi, ndbi: evidence.sentinel.ndbi,
-      industrial_distance_capped_m: Math.min(evidence.osm.nearest_industrial?.distance_m ?? 1500, 1500),
-      industrial_within_1000m: evidence.osm.industrial_within_1000m,
-      prior_detections_30d: event.history.detections, prior_active_days_30d: event.history.activeDays, history_coverage_days: event.history.coverageDays };
+    const distM = evidence.osm?.nearest_industrial?.distance_m ?? 1500;
+    const raw = {
+      ...observation.raw,
+      ndvi: evidence.sentinel?.status === 'ready' ? evidence.sentinel.ndvi : undefined,
+      ndbi: evidence.sentinel?.status === 'ready' ? evidence.sentinel.ndbi : undefined,
+      valid_pixel_fraction: evidence.sentinel?.status === 'ready' ? evidence.sentinel.valid_pixel_fraction : undefined,
+      scene_day_offset: evidence.sentinel?.status === 'ready' ? evidence.sentinel.day_offset : undefined,
+      sentinel_available: evidence.sentinel?.status === 'ready' ? 1.0 : 0.0,
+      industrial_distance_m: distM,
+      industrial_distance_capped_m: Math.min(distM, 1500),
+      industrial_within_1000m: evidence.osm?.industrial_within_1000m ?? 0,
+      power_plant_nearby: evidence.osm?.power_plant_nearby ? 1.0 : 0.0,
+      mine_or_quarry_nearby: evidence.osm?.mine_or_quarry_nearby ? 1.0 : 0.0,
+      industrial_landuse_nearby: evidence.osm?.industrial_landuse_nearby ? 1.0 : 0.0,
+      prior_detections_30d: event.history?.detections ?? 0,
+      prior_active_days_30d: event.history?.activeDays ?? 0,
+      history_coverage_days: event.history?.coverageDays ?? 0,
+    };
     const result = await mlRequest<{predictions: (Prediction & {id: string; history: ThermalEvent['history']})[]}>('/predict', {observations: [raw], use_precomputed_history: true});
     const prediction = result.predictions[0];
-    if (prediction) this.predictions.set(event.id, prediction);
+    if (prediction) {
+      this.predictions.set(event.id, prediction);
+      observation.event.prediction = prediction;
+      observation.event.context = {
+        ndvi: evidence.sentinel?.ndvi,
+        ndbi: evidence.sentinel?.ndbi,
+        valid_pixel_fraction: evidence.sentinel?.valid_pixel_fraction,
+        scene_day_offset: evidence.sentinel?.day_offset,
+        sentinel_available: evidence.sentinel?.status === 'ready',
+        industrial_distance_m: distM,
+        industrial_within_1000m: evidence.osm?.industrial_within_1000m,
+        power_plant_nearby: evidence.osm?.power_plant_nearby,
+        mine_or_quarry_nearby: evidence.osm?.mine_or_quarry_nearby,
+        industrial_landuse_nearby: evidence.osm?.industrial_landuse_nearby,
+      };
+    }
     return prediction;
-  }
+  };
 
   sources(): SourceStatus[] {
     return [this.firms.source, ...this.contextSources,

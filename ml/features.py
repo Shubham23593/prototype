@@ -20,7 +20,18 @@ THERMAL_FEATURES = [
     "season_sin", "season_cos", "prior_detections_30d", "prior_active_days_30d",
     "history_coverage_days", "recurrence_fraction",
 ]
-CONTEXT_FEATURES = ["ndvi", "ndbi", "industrial_distance_capped_m", "industrial_within_1000m"]
+CONTEXT_FEATURES = [
+    "ndvi", "ndbi", "valid_pixel_fraction", "scene_day_offset", "sentinel_available",
+    "industrial_distance_m", "industrial_within_1000m", "power_plant_nearby",
+    "mine_or_quarry_nearby", "industrial_landuse_nearby"
+]
+SIH_CLASSES = {
+    "industrial": "Potential Industrial Fire",
+    "forest": "Forest / Natural Fire",
+    "agriculture": "Agricultural or Waste Burning",
+    "persistent": "Persistent Thermal Source",
+    "uncertain": "Other / Uncertain",
+}
 CLASS_NAMES = {0: "Presumed vegetation fire", 2: "Static thermal source", 3: "Offshore thermal source"}
 CLASS_KEYS = {0: "vegetation", 2: "static", 3: "offshore"}
 
@@ -127,3 +138,142 @@ def feature_matrix(frame: pd.DataFrame, features: list[str] | None = None) -> pd
         if c not in df:
             df[c] = np.nan  # Missing context stays missing, never fabricated.
     return df[selected].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan).astype(np.float32)
+
+
+def calculate_risk(frp: float, brightness: float, confidence: str, category: str,
+                   dist_m: float | None = None, power_nearby: bool = False,
+                   people: float | None = None, model_score: float | None = None) -> dict[str, Any]:
+    """Calculate transparent risk: Hazard x Exposure x Confidence."""
+    # 1. Hazard (0.1 to 1.0)
+    cat_hazard = {
+        "industrial": 0.85,
+        "forest": 0.65,
+        "agriculture": 0.40,
+        "persistent": 0.35,  # Fixed, controlled furnace/flare is lower hazard than wild fire
+        "uncertain": 0.25,
+    }.get(category, 0.30)
+    frp_factor = min(max(0.0, float(frp or 0)) / 60.0, 1.0) * 0.15
+    temp_factor = min(max(0.0, float(brightness or 300) - 315) / 50.0, 1.0) * 0.10
+    hazard = round(min(1.0, max(0.1, cat_hazard + frp_factor + temp_factor)), 3)
+
+    # 2. Exposure (0.1 to 1.0)
+    dist = float(dist_m) if dist_m is not None and not np.isnan(dist_m) else 1500.0
+    if dist <= 500:
+        base_exp = 0.90
+    elif dist <= 1000:
+        base_exp = 0.75
+    elif dist <= 1500:
+        base_exp = 0.50
+    else:
+        base_exp = 0.25
+    if power_nearby:
+        base_exp = min(1.0, base_exp + 0.15)
+    if people is not None and not np.isnan(people) and people > 500:
+        base_exp = min(1.0, base_exp + 0.15)
+    exposure = round(min(1.0, max(0.1, base_exp)), 3)
+
+    # 3. Confidence (0.3 to 1.0)
+    conf_str = str(confidence).lower()
+    conf_base = 0.95 if conf_str in ["h", "high"] else 0.75 if conf_str in ["n", "nominal"] else 0.50
+    if model_score is not None and not np.isnan(model_score):
+        conf_val = 0.5 * conf_base + 0.5 * float(model_score)
+    else:
+        conf_val = conf_base
+    conf = round(min(1.0, max(0.3, conf_val)), 3)
+
+    score = round(hazard * exposure * conf, 4)
+    if score >= 0.70:
+        level = "critical"
+    elif score >= 0.45:
+        level = "high"
+    elif score >= 0.25:
+        level = "medium"
+    else:
+        level = "low"
+
+    factors = []
+    if category == "industrial":
+        factors.append("Proximity to mapped industrial facilities")
+    if dist <= 1000:
+        factors.append(f"Within {int(dist)} m of infrastructure")
+    if power_nearby:
+        factors.append("Critical power infrastructure nearby")
+    if frp and frp > 25:
+        factors.append(f"High thermal output ({frp:.1f} MW FRP)")
+    if category == "persistent":
+        factors.append("Known recurring thermal source")
+    if not factors:
+        factors.append("Standard baseline regional thermal activity")
+
+    return {
+        "score": score,
+        "level": level,
+        "hazard": hazard,
+        "exposure": exposure,
+        "confidence": conf,
+        "factors": factors,
+    }
+
+
+def derive_sih_classification(raw_class: str, proba_dict: dict[str, float],
+                              frp: float, brightness: float, active_days: float,
+                              dist_m: float | None = None, ndvi: float | None = None,
+                              ndbi: float | None = None, power_nearby: bool = False,
+                              landuse_ind: bool = False, model_score: float | None = None) -> tuple[str, str, str]:
+    """Derive one of the 5 SIH categories based on multi-source evidence.
+
+    Returns (classKey, label, explanation).
+    Categories:
+    - industrial: Potential Industrial Fire
+    - forest: Forest / Natural Fire
+    - agriculture: Agricultural or Waste Burning
+    - persistent: Persistent Thermal Source
+    - uncertain: Other / Uncertain
+    """
+    dist = float(dist_m) if dist_m is not None and not np.isnan(dist_m) else 1500.0
+    has_ind_context = dist <= 1000 or power_nearby or landuse_ind
+    has_high_frp = (frp or 0) >= 12.0 or (brightness or 0) >= 335.0
+    is_persistent = (active_days or 0) >= 8 or raw_class in ["static", "persistent"]
+    ndvi_val = float(ndvi) if ndvi is not None and not np.isnan(ndvi) else None
+    ndbi_val = float(ndbi) if ndbi is not None and not np.isnan(ndbi) else None
+
+    # Condition 1: Persistent Thermal Source
+    if is_persistent and (active_days or 0) >= 6:
+        label = "Persistent Thermal Source"
+        exp = f"Observed active across {int(active_days)} calendar dates in 30 days. Consistent with a furnace, flare stack, kiln, or fixed facility heat signature."
+        return "persistent", label, exp
+
+    # Condition 2: Potential Industrial Fire
+    # Near industrial infrastructure with sudden acute thermal spike and low-to-moderate recurrence
+    if has_ind_context and (has_high_frp or (ndbi_val is not None and ndbi_val > 0.05)) and (active_days or 0) <= 6:
+        label = "Potential Industrial Fire"
+        exp = f"Detected {int(dist)} m from mapped infrastructure with high thermal intensity ({frp:.1f} MW FRP, {brightness:.1f} K). Provisional industrial fire candidate requiring verification."
+        return "industrial", label, exp
+
+    # Condition 3: Forest / Natural Fire
+    # Rural vegetation with high NDVI or natural fire signature, away from industrial centers
+    if not has_ind_context and ((ndvi_val is not None and ndvi_val >= 0.35) or raw_class in ["vegetation", "forest"]):
+        if (frp or 0) >= 15.0 or (ndvi_val is not None and ndvi_val >= 0.45):
+            label = "Forest / Natural Fire"
+            ndvi_detail = f"NDVI {ndvi_val:.2f}" if ndvi_val is not None else "vegetation cover"
+            exp = f"Located in natural vegetation ({ndvi_detail}) without nearby industrial facilities. Profile matches forest or wildland burning."
+            return "forest", label, exp
+
+    # Condition 4: Agricultural or Waste Burning
+    # Moderate/low FRP, agricultural / open land, low recurrence
+    if not has_ind_context and (active_days or 0) <= 3 and (frp or 0) < 25.0:
+        label = "Agricultural or Waste Burning"
+        exp = f"Short-duration thermal detection ({frp:.1f} MW FRP) with low recurrence in open rural terrain. Characteristic of seasonal crop-residue or waste burning."
+        return "agriculture", label, exp
+
+    # Fallback to model probability if available
+    if model_score is not None and model_score < 0.60:
+        return "uncertain", "Other / Uncertain", "Model score below confidence threshold; insufficient contextual evidence to confirm classification."
+
+    if raw_class in ["static", "persistent"]:
+        return "persistent", "Persistent Thermal Source", "Recurring thermal activity consistent with fixed infrastructure heat output."
+    elif raw_class in ["vegetation", "forest"]:
+        return "forest", "Forest / Natural Fire", "Thermal anomaly in open terrain consistent with vegetation fire."
+
+    return "uncertain", "Other / Uncertain", "Provisional classification; independent ground verification required."
+

@@ -90,11 +90,18 @@ def osm_context(latitude: float, longitude: float) -> dict:
                              "url": f"https://www.openstreetmap.org/{element['type']}/{element['id']}"})
         features.sort(key=lambda feature: feature["distance_m"])
         industrial_features = [feature for feature in features if feature["industrial"]]
+        power_plant = any(f["tags"].get("power") in ["plant", "generator"] for f in features)
+        mine_or_quarry = any(f["tags"].get("landuse") in ["quarry", "mining"] or f["tags"].get("industrial") in ["mine", "quarry"] for f in features)
+        industrial_landuse = any(f["tags"].get("landuse") == "industrial" for f in features)
+        nearest_dist = industrial_features[0]["distance_m"] if industrial_features else None
         return {"status": "ready", "source": source, "fetched_at": now(), "snapshot_at": payload.get("osm3s", {}).get("timestamp_osm_base"),
                 "radius_m": 1500, "features": features[:100], "total_features": len(features),
                 "nearest_industrial": industrial_features[0] if industrial_features else None,
-                "industrial_distance_m": industrial_features[0]["distance_m"] if industrial_features else None,
+                "industrial_distance_m": nearest_dist,
                 "industrial_within_1000m": sum(feature["distance_m"] <= 1000 for feature in industrial_features),
+                "power_plant_nearby": power_plant,
+                "mine_or_quarry_nearby": mine_or_quarry,
+                "industrial_landuse_nearby": industrial_landuse,
                 "note": "Current OSM snapshot, not historical ground truth. Proximity is context, not proof of an industrial fire. Mapping coverage varies."}
     except Exception as exc:
         return unavailable(source, exc)
@@ -171,14 +178,16 @@ def sentinel_context(latitude: float, longitude: float, acquired_at: str) -> dic
             try:
                 values = _sample_scene(scene, latitude, longitude)
                 if values["status"] == "ready":
-                    return {**meta, **values, "source": source, "fetched_at": now(), "note": "Optical context acquired on or before the hotspot. Sentinel-2 has no thermal-infrared band and is not a live temperature measurement."}
-                failures.append({**meta, **values})
+                    return {**meta, **values, "sentinel_available": True, "scene_day_offset": meta["day_offset"], "source": source, "fetched_at": now(), "note": "Optical context acquired on or before the hotspot. Sentinel-2 has no thermal-infrared band and is not a live temperature measurement."}
+                failures.append({**meta, **values, "sentinel_available": False})
             except Exception as exc:
-                failures.append({**meta, "status": "unavailable", "message": f"COG pixels could not be read ({type(exc).__name__}). Catalog metadata alone is not a spectral measurement."})
-        return {"status": "unavailable" if any(item["status"] == "unavailable" for item in failures) else "cloudy", "source": source,
+                failures.append({**meta, "status": "unavailable", "sentinel_available": False, "message": f"COG pixels could not be read ({type(exc).__name__}). Catalog metadata alone is not a spectral measurement."})
+        return {"status": "unavailable" if any(item["status"] == "unavailable" for item in failures) else "cloudy", "sentinel_available": False, "source": source,
                 "fetched_at": now(), "scenes_checked": failures, "message": "No readable, sufficiently clear scene among the three most recent candidates. NDVI and NDBI remain missing."}
     except Exception as exc:
-        return unavailable(source, exc)
+        res = unavailable(source, exc)
+        res["sentinel_available"] = False
+        return res
 
 
 def population_context(latitude: float, longitude: float) -> dict:

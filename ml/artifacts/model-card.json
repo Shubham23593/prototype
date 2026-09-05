@@ -1,9 +1,9 @@
 {
   "status": "ready",
   "model_id": "xgb-62b397c0-thermal",
-  "trained_at": "2026-09-05T12:34:52.840431+00:00",
+  "trained_at": "2026-09-05T13:53:13.620226+00:00",
   "algorithm": "XGBoost",
-  "library_version": "3.0.5",
+  "library_version": "3.4.1",
   "feature_mode": "Thermal + temporal baseline",
   "target": "NASA inferred source type",
   "parameters": {
@@ -41,71 +41,71 @@
   "features": [
     {
       "name": "bright_ti4",
-      "importance": 0.015535138547420502
+      "importance": 0.017687564715743065
     },
     {
       "name": "bright_ti5",
-      "importance": 0.014013506472110748
+      "importance": 0.015397579409182072
     },
     {
       "name": "temperature_delta",
-      "importance": 0.01224600337445736
+      "importance": 0.013530412688851357
     },
     {
       "name": "log_frp",
-      "importance": 0.0134489880874753
+      "importance": 0.015401073731482029
     },
     {
       "name": "frp_density",
-      "importance": 0.013264006935060024
+      "importance": 0.014349953271448612
     },
     {
       "name": "scan",
-      "importance": 0.011041504330933094
+      "importance": 0.013375340960919857
     },
     {
       "name": "track",
-      "importance": 0.010899192653596401
+      "importance": 0.011833449825644493
     },
     {
       "name": "is_day",
-      "importance": 0.1690748631954193
+      "importance": 0.11451201140880585
     },
     {
       "name": "confidence_score",
-      "importance": 0.008917365223169327
+      "importance": 0.008185828104615211
     },
     {
       "name": "hour_sin",
-      "importance": 0.02020692266523838
+      "importance": 0.02763552777469158
     },
     {
       "name": "hour_cos",
-      "importance": 0.017107324674725533
+      "importance": 0.01940813846886158
     },
     {
       "name": "season_sin",
-      "importance": 0.026104038581252098
+      "importance": 0.026753168553113937
     },
     {
       "name": "season_cos",
-      "importance": 0.018816713243722916
+      "importance": 0.02576536498963833
     },
     {
       "name": "prior_detections_30d",
-      "importance": 0.09231733530759811
+      "importance": 0.03358476608991623
     },
     {
       "name": "prior_active_days_30d",
-      "importance": 0.11935458332300186
+      "importance": 0.063422791659832
     },
     {
       "name": "history_coverage_days",
-      "importance": 0.02101263962686062
+      "importance": 0.02199506014585495
     },
     {
       "name": "recurrence_fraction",
-      "importance": 0.41663995385169983
+      "importance": 0.5571619272232056
     }
   ],
   "feature_names": [
@@ -131,21 +131,21 @@
     "spatial_temporal": {
       "available": true,
       "rows": 44237,
-      "accuracy": 0.9922689151615164,
-      "balanced_accuracy": 0.6514724901033432,
-      "macro_f1": 0.6274318311551829,
+      "accuracy": 0.9921332820941745,
+      "balanced_accuracy": 0.6523765734989673,
+      "macro_f1": 0.6269078375164042,
       "majority_baseline_accuracy": 0.9691208716685128,
       "majority_baseline_macro_f1": 0.32810610583031025,
       "confusion_matrix": [
         [
-          42590,
-          280,
+          42580,
+          290,
           1
         ],
         [
-          51,
-          1305,
-          2
+          48,
+          1309,
+          1
         ],
         [
           6,
@@ -155,15 +155,15 @@
       ],
       "per_class": {
         "Presumed vegetation fire": {
-          "precision": 0.99866344643234,
-          "recall": 0.9934454526369807,
-          "f1-score": 0.9960476157066349,
+          "precision": 0.9987334052634048,
+          "recall": 0.993212194723706,
+          "f1-score": 0.9959651482369452,
           "support": 42871.0
         },
         "Static thermal source": {
-          "precision": 0.8223062381852552,
-          "recall": 0.9609720176730486,
-          "f1-score": 0.8862478777589134,
+          "precision": 0.8176139912554653,
+          "recall": 0.9639175257731959,
+          "f1-score": 0.8847583643122676,
           "support": 1358.0
         },
         "Offshore thermal source": {
@@ -172,17 +172,17 @@
           "f1-score": 0.0,
           "support": 8.0
         },
-        "accuracy": 0.9922689151615164,
+        "accuracy": 0.9921332820941745,
         "macro avg": {
-          "precision": 0.6069898948725317,
-          "recall": 0.6514724901033432,
-          "f1-score": 0.6274318311551829,
+          "precision": 0.6054491321729567,
+          "recall": 0.6523765734989673,
+          "f1-score": 0.6269078375164042,
           "support": 44237.0
         },
         "weighted avg": {
-          "precision": 0.993068980343523,
-          "recall": 0.9922689151615164,
-          "f1-score": 0.9924968228170027,
+          "precision": 0.9929927349768823,
+          "recall": 0.9921332820941745,
+          "f1-score": 0.9923711763637258,
           "support": 44237.0
         }
       },
@@ -193,58 +193,58 @@
     "temporal": {
       "available": true,
       "rows": 168047,
-      "accuracy": 0.990913256410409,
-      "balanced_accuracy": 0.6745787329740732,
-      "macro_f1": 0.6631944068413619,
+      "accuracy": 0.9909251578427464,
+      "balanced_accuracy": 0.6701993768829683,
+      "macro_f1": 0.6571258963731057,
       "majority_baseline_accuracy": 0.952370467785798,
       "majority_baseline_macro_f1": 0.32520141831001653,
       "confusion_matrix": [
         [
-          158857,
-          1177,
-          9
+          158850,
+          1188,
+          5
         ],
         [
-          171,
-          7655,
-          40
+          161,
+          7666,
+          39
         ],
         [
           39,
-          91,
-          8
+          93,
+          6
         ]
       ],
       "per_class": {
         "Presumed vegetation fire": {
-          "precision": 0.9986798015930394,
-          "recall": 0.9925894915741394,
-          "f1-score": 0.9956253329572875,
+          "precision": 0.9987425337944043,
+          "recall": 0.9925457533287929,
+          "f1-score": 0.9956345015403033,
           "support": 160043.0
         },
         "Static thermal source": {
-          "precision": 0.8578953266838507,
-          "recall": 0.9731756928553267,
-          "f1-score": 0.9119066055155162,
+          "precision": 0.8568235162624344,
+          "recall": 0.9745741164505467,
+          "f1-score": 0.9119134003449711,
           "support": 7866.0
         },
         "Offshore thermal source": {
-          "precision": 0.14035087719298245,
-          "recall": 0.057971014492753624,
-          "f1-score": 0.08205128205128205,
+          "precision": 0.12,
+          "recall": 0.043478260869565216,
+          "f1-score": 0.06382978723404255,
           "support": 138.0
         },
-        "accuracy": 0.990913256410409,
+        "accuracy": 0.9909251578427464,
         "macro avg": {
-          "precision": 0.6656420018232908,
-          "recall": 0.6745787329740732,
-          "f1-score": 0.6631944068413619,
+          "precision": 0.6585220166856129,
+          "recall": 0.6701993768829683,
+          "f1-score": 0.6571258963731057,
           "support": 168047.0
         },
         "weighted avg": {
-          "precision": 0.9913850562467799,
-          "recall": 0.990913256410409,
-          "f1-score": 0.9909563729099078,
+          "precision": 0.9913779187666435,
+          "recall": 0.9909251578427464,
+          "f1-score": 0.9909504593819981,
           "support": 168047.0
         }
       },
@@ -278,7 +278,7 @@
       "mirror_commit": "30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
       "sha256": "62b397c086bf1934010fd86987506e8aca45d74a9fc0270cd434128a9a9a3db6",
       "bytes": 24547074,
-      "retrieved_at": "2026-09-05T12:28:02.276439+00:00",
+      "retrieved_at": "2026-09-05T13:53:02.373937+00:00",
       "notes": [
         "NASA type is an algorithmic source-type label, not an independently verified incident label.",
         "Collection-2 type-field reprocessing status is unverified for the mirror. Request freshly reprocessed standard data before scientific use.",
@@ -307,5 +307,5 @@
     "Sentinel-2 and OSM are on-demand evidence, NOT inputs to this baseline.",
     "The live 7-day feed gives partial recurrence coverage; missing detections/cloud cover do not prove a source is inactive."
   ],
-  "artifact_sha256": "22edb6a3977e4a6cb7b57bfe1530609a0630fb4ca74fa893c928dff2b6604c79"
+  "artifact_sha256": "8db21359f73f1e6c2cf58eb17666d68cf731dba8f63a9a4092054a42a2ebcbbd"
 }

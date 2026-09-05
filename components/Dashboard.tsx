@@ -68,7 +68,27 @@ export default function Dashboard(){
   useEffect(()=>{if(!fullScreen)return;const key=(event:KeyboardEvent)=>{if(event.key==='Escape')setFullScreen(false);};document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key);},[fullScreen]);
   useEffect(()=>{if(!exportOpen)return;const close=(event:MouseEvent)=>{if(!exportRef.current?.contains(event.target as Node))setExportOpen(false);};document.addEventListener('mousedown',close);return()=>document.removeEventListener('mousedown',close);},[exportOpen]);
   function setDataMode(next:DataMode){userChoseMode.current=true;setMode(next);setDates(null);setSelected(null);setEvidence(null);}
-  async function reload(){setRefreshing(true);try{if(mode==='live'&&spatialPage)await api('/api/sources/check',{method:'POST',body:'{}'});forceRefresh();}catch(error){notify((error as Error).message,true);}finally{setRefreshing(false);}}
+  async function reload(){
+    setRefreshing(true);
+    try{
+      if(mode==='live'){
+        const res=await api<{count:number;source:string;status:string;error?:string}>('/api/sources/firms/refresh',{method:'POST',body:'{}'});
+        if(res.error){
+          notify(`NASA FIRMS: ${res.error}`,true);
+        }else{
+          notify(`Fetched ${res.count} live NASA FIRMS observations.`);
+        }
+        health.reload();
+      }else if(spatialPage){
+        await api('/api/sources/check',{method:'POST',body:'{}'});
+      }
+      forceRefresh();
+    }catch(error){
+      notify((error as Error).message,true);
+    }finally{
+      setRefreshing(false);
+    }
+  }
   function openDates(){setDateFrom(dates?.from||data?.range.from?.slice(0,10)||'');setDateTo(dates?.to||data?.range.to?.slice(0,10)||'');setDateError(null);setDateModal(true);}
   function applyDates(){if(!dateFrom||!dateTo||dateFrom>dateTo){setDateError('Choose valid start and end dates, in that order.');return;}if(Date.parse(dateTo)-Date.parse(dateFrom)>6*86400000){setDateError('The available map archive spans seven calendar days. Select a range within that window.');return;}if(data?.range.availableFrom&&dateFrom<data.range.availableFrom.slice(0,10)||data?.range.availableTo&&dateTo>data.range.availableTo.slice(0,10)){setDateError('Select dates inside the source’s available observation window.');return;}setDates({from:dateFrom,to:dateTo});setDateModal(false);}
   const saveImported=useCallback((value:ImportedDataset)=>{setImported(value);try{localStorage.setItem('thermoscan-imported-dataset',JSON.stringify(value));}catch{/* CSV itself remains server-side. */}},[]);
@@ -96,7 +116,7 @@ export default function Dashboard(){
       </header>
       <main className="mx-auto max-w-[1720px] px-5 pb-7 pt-7 lg:px-7">
         <div className="flex flex-wrap items-center justify-between gap-4"><div><div className="mb-2 flex items-center gap-1.5 text-[8px] font-medium uppercase tracking-[.14em] text-[#a7b2ba]"><Satellite size={10} strokeWidth={1.5}/>SATELLITE INSIGHTS, GROUNDED IN DATA</div><h1 className="font-display text-[26px] font-semibold tracking-[-.04em] text-[#283640] sm:text-[29px]">{PAGES[page].title}</h1><p className="mt-2 text-[10.5px] leading-5 text-[#91a0ab]">{PAGES[page].description}</p></div>
-          <div className="flex gap-2 self-center">{spatialPage&&<div className="relative" ref={exportRef}><button onClick={()=>setExportOpen(!exportOpen)} aria-expanded={exportOpen} disabled={!data||data.availability==='unavailable'} className="btn-secondary"><Download size={13}/>Export data<ChevronDown size={10}/></button>{exportOpen&&<div className="absolute right-0 top-11 z-[1500] w-56 rounded-lg border border-[#e6ebef] bg-white p-1.5 shadow-lg"><a href={`/api/export?${query}&format=csv`} onClick={()=>setExportOpen(false)} className="flex items-center gap-3 rounded-md p-3 text-[11px] text-[#8094a2] hover:bg-[#f5f7f9]"><FileSpreadsheet size={15}/><div>Download CSV<span className="mt-1 block text-[8px] text-[#a7b4bd]">All matching observations</span></div></a><a href={`/api/export?${query}&format=geojson`} onClick={()=>setExportOpen(false)} className="flex items-center gap-3 rounded-md p-3 text-[11px] text-[#8094a2] hover:bg-[#f5f7f9]"><FileJson size={15}/><div>Download GeoJSON<span className="mt-1 block text-[8px] text-[#a7b4bd]">Coordinates, predictions & source</span></div></a></div>}</div>}<button onClick={reload} disabled={refreshing||overview.loading&&spatialPage} className="btn-primary"><RefreshCw size={12} className={refreshing||overview.loading&&spatialPage?'animate-spin':''}/>{refreshing?'Checking…':'Refresh view'}</button></div>
+          <div className="flex gap-2 self-center">{spatialPage&&<div className="relative" ref={exportRef}><button onClick={()=>setExportOpen(!exportOpen)} aria-expanded={exportOpen} disabled={!data||data.availability==='unavailable'} className="btn-secondary"><Download size={13}/>Export data<ChevronDown size={10}/></button>{exportOpen&&<div className="absolute right-0 top-11 z-[1500] w-56 rounded-lg border border-[#e6ebef] bg-white p-1.5 shadow-lg"><a href={`/api/export?${query}&format=csv`} onClick={()=>setExportOpen(false)} className="flex items-center gap-3 rounded-md p-3 text-[11px] text-[#8094a2] hover:bg-[#f5f7f9]"><FileSpreadsheet size={15}/><div>Download CSV<span className="mt-1 block text-[8px] text-[#a7b4bd]">All matching observations</span></div></a><a href={`/api/export?${query}&format=geojson`} onClick={()=>setExportOpen(false)} className="flex items-center gap-3 rounded-md p-3 text-[11px] text-[#8094a2] hover:bg-[#f5f7f9]"><FileJson size={15}/><div>Download GeoJSON<span className="mt-1 block text-[8px] text-[#a7b4bd]">Coordinates, predictions & source</span></div></a></div>}</div>}<button onClick={reload} disabled={refreshing||overview.loading&&spatialPage} className="btn-primary"><RefreshCw size={12} className={refreshing||overview.loading&&spatialPage?'animate-spin':''}/>{refreshing?'Refreshing…':'Refresh view'}</button></div>
         </div>
 
         {spatialPage&&<>
@@ -106,8 +126,23 @@ export default function Dashboard(){
             <label className="relative"><ListFilter size={13} className="pointer-events-none absolute left-3 top-3 text-[#9baab5]"/><select aria-label="Filter source type" className="h-[37px] appearance-none rounded-lg border border-[#e3e8ec] bg-white py-2 pl-8 pr-8 text-[10px] font-medium text-[#7f919e]" value={classKey} onChange={event=>setClassKey(event.target.value as ClassKey|'all')}><option value="all">All source types</option>{Object.entries(CLASSES).map(([key,value])=><option key={key} value={key}>{value.short}</option>)}</select><ChevronDown size={10} className="pointer-events-none absolute right-3 top-3.5 text-[#a9b5be]"/></label>
             <div className="ml-auto flex h-[37px] items-center rounded-lg border border-[#e2e8ec] bg-[#eef2f5] p-[3px] text-[10px]"><button onClick={()=>setDataMode('archive')} className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 ${mode==='archive'?'bg-white font-medium text-[#9c7e64] shadow-sm':'text-[#9fadb7]'}`}><History size={11}/>Historical</button><button onClick={()=>setDataMode('live')} className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 ${mode==='live'?'bg-white font-medium text-[#759584] shadow-sm':'text-[#9fadb7]'}`}><Radio size={11}/>Near-real-time</button></div>
           </div>
-          <div className={`my-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3.5 py-2.5 text-[9px] ${mode==='archive'?'border-[#eee6da] bg-[#fcf8f1] text-[#b09775]':data?.availability==='ready'?'border-[#e0ebe5] bg-[#f3f8f5] text-[#87a593]':'border-[#eee2d5] bg-[#fdf8f2] text-[#b5997a]'}`}>
-            <span className="flex items-center gap-2">{mode==='archive'?<History size={12}/>:<Radio size={12}/>}<span>{mode==='archive'?<>Genuine historical observations <span className="mx-1.5 opacity-40">/</span> March 2025 archive <span className="hidden xl:inline">· not a live feed</span></>:data?.availability==='ready'?'NASA near-real-time feed · original acquisition times preserved':'Live connection unavailable or delayed · no substitute data'}</span></span>
+          <div className={`my-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3.5 py-2.5 text-[9px] ${mode==='archive'?'border-[#eee6da] bg-[#fcf8f1] text-[#b09775]':data?.availability==='ready'?'border-[#e0ebe5] bg-[#f3f8f5] text-[#87a593]':'border-[#eedad3] bg-[#fff5f2] text-[#c9622d]'}`}>
+            <span className="flex items-center gap-2">
+              {mode==='archive'?<History size={12}/>:<Radio size={12}/>}
+              <span>
+                {mode==='archive' ? (
+                  <>Genuine historical observations <span className="mx-1.5 opacity-40">/</span> March 2025 archive <span className="hidden xl:inline">· not a live feed</span></>
+                ) : data?.availability==='ready' ? (
+                  <>
+                    <span className="font-semibold">NASA FIRMS near-real-time observations</span>
+                    {data.stats.lastRefreshedAt && <span className="ml-2 opacity-75">· Refreshed: {new Date(data.stats.lastRefreshedAt).toLocaleTimeString()} UTC</span>}
+                    {data.range?.from && <span className="ml-2 opacity-60 hidden md:inline">({formatDate(data.range.from)} — {formatDate(data.range.to)})</span>}
+                  </>
+                ) : (
+                  <span className="font-semibold text-[#b84826]">Live source unavailable. Historical data is not being used as a fallback.</span>
+                )}
+              </span>
+            </span>
             <button onClick={()=>navigate('sources')} className="flex items-center gap-1.5 font-medium">{mode==='archive'?'Source & provenance':'Inspect connection'}<ArrowUpRight size={11}/></button>
           </div>
           {data&&!data.model.available&&<div className="mb-4"><ErrorState message={data.model.error||'Inference is not currently available. No model scores are generated.'} retry={overview.reload}/></div>}
@@ -126,6 +161,6 @@ export default function Dashboard(){
     </div>
     {selected&&<ObservationDrawer key={selected.id} event={selected} onClose={()=>setSelected(null)} onReviewed={forceRefresh} onEvidence={onEvidence} notify={notify}/>}
     {toast&&<Toast message={toast.message} error={toast.error} onClose={clearToast}/>}
-    {dateModal&&<Modal title="Select an observation window" onClose={()=>setDateModal(false)}><p className="text-[11px] leading-6 text-[#93a4af]">{mode==='archive'?'The bundled map window contains all valid observations from 25–31 March 2025. The full quarter is used in the training pipeline.':'The near-real-time feed covers the most recent seven days. There may be no detections or unavailable coverage in a selected area.'}</p><div className="mt-5 flex gap-2">{(['24h','48h','7d'] as const).map(value=><button key={value} className={`btn-secondary flex-1 ${windowSize===value&&!dates?'!border-[#dabaa0] !bg-[#fdf9f4] !text-[#b49070]':''}`} onClick={()=>{setWindowSize(value);setDates(null);setDateModal(false);}}>{value==='7d'?'7 days':value==='48h'?'48 hours':'24 hours'}</button>)}</div><div className="my-5 flex items-center gap-3 text-[9px] text-[#b0bcc4]"><span className="h-px flex-1 bg-[#edf1f4]"/>OR CHOOSE UTC DATES<span className="h-px flex-1 bg-[#edf1f4]"/></div><div className="grid grid-cols-2 gap-3"><label className="text-[10px] text-[#95a6b2]">From<input type="date" aria-label="Start observation date" className="field mt-2" value={dateFrom} min={data?.range.availableFrom?.slice(0,10)} max={data?.range.availableTo?.slice(0,10)} onChange={event=>setDateFrom(event.target.value)}/></label><label className="text-[10px] text-[#95a6b2]">Through<input type="date" aria-label="End observation date" className="field mt-2" value={dateTo} min={data?.range.availableFrom?.slice(0,10)} max={data?.range.availableTo?.slice(0,10)} onChange={event=>setDateTo(event.target.value)}/></label></div>{dateError&&<div className="mt-4"><ErrorState message={dateError}/></div>}<div className="mt-6 flex justify-end gap-2"><button className="btn-secondary" onClick={()=>setDateModal(false)}>Cancel</button><button className="btn-primary" onClick={applyDates}>Apply window<ArrowRight size={12}/></button></div></Modal>}
+    {dateModal&&<Modal title="Select an observation window" onClose={()=>setDateModal(false)}><p className="text-[11px] leading-6 text-[#93a4af]">{mode==='archive'?'The bundled map window contains all valid observations from 25–31 March 2025. The full quarter is used in the training pipeline.':'The near-real-time feed covers the last rolling 24, 48, or 168 hours across NASA FIRMS satellites.'}</p><div className="mt-5 flex flex-wrap gap-2">{(['24h','48h','7d'] as const).map(value=><button key={value} className={`btn-secondary flex-1 ${windowSize===value&&!dates?'!border-[#dabaa0] !bg-[#fdf9f4] !text-[#b49070] font-semibold':''}`} onClick={()=>{setWindowSize(value);setDates(null);setDateModal(false);}}>{value==='7d'?'7 days':value==='48h'?'48 hours':'24 hours'}</button>)}</div><div className="my-5 flex items-center gap-3 text-[9px] text-[#b0bcc4]"><span className="h-px flex-1 bg-[#edf1f4]"/>OR CHOOSE UTC DATES<span className="h-px flex-1 bg-[#edf1f4]"/></div><div className="grid grid-cols-2 gap-3"><label className="text-[10px] text-[#95a6b2]">From<input type="date" aria-label="Start observation date" className="field mt-2" value={dateFrom} min={mode==='archive'?data?.range.availableFrom?.slice(0,10):undefined} max={mode==='archive'?data?.range.availableTo?.slice(0,10):undefined} onChange={event=>setDateFrom(event.target.value)}/></label><label className="text-[10px] text-[#95a6b2]">Through<input type="date" aria-label="End observation date" className="field mt-2" value={dateTo} min={mode==='archive'?data?.range.availableFrom?.slice(0,10):undefined} max={mode==='archive'?data?.range.availableTo?.slice(0,10):undefined} onChange={event=>setDateTo(event.target.value)}/></label></div>{dateError&&<div className="mt-4"><ErrorState message={dateError}/></div>}<div className="mt-6 flex justify-end gap-2"><button className="btn-secondary" onClick={()=>setDateModal(false)}>Cancel</button><button className="btn-primary" onClick={applyDates}>Apply window<ArrowRight size={12}/></button></div></Modal>}
   </div>;
 }

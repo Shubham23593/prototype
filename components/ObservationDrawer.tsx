@@ -4,7 +4,7 @@ import { ArrowUpRight, Bookmark, Check, CheckCheck, ChevronRight, CircleHelp, Cl
 import { api, useApi } from '@/lib/api';
 import { CLASSES, coordinates, formatDate, formatNumber, formatTime, satelliteName } from '@/lib/constants';
 import type { Evidence, Review, ThermalEvent } from '@/lib/types';
-import { ClassBadge, ErrorState, ExternalLink } from './ui';
+import { ClassBadge, ErrorState, ExternalLink, RiskBadge } from './ui';
 
 export default function ObservationDrawer({ event, onClose, onReviewed, onEvidence, notify }: {event: ThermalEvent; onClose: () => void; onReviewed: () => void; onEvidence: (value: Evidence) => void; notify: (message: string, error?: boolean) => void}) {
   const [review, setReview] = useState<Review | null>(event.review || null);
@@ -45,28 +45,50 @@ export default function ObservationDrawer({ event, onClose, onReviewed, onEviden
     finally { setSaving(false); }
   }
   function download() {
-    const blob = new Blob([JSON.stringify({ observation: {...event, review}, evidence: context.data || null, warning: 'Satellite detection and provisional model output, not a confirmed incident.' }, null, 2)], {type: 'application/json'});
+    const blob = new Blob([JSON.stringify({ observation: {...event, review}, evidence: context.data || null, warning: 'Satellite detection and provisional model output, not a confirmed incident. Requires ground verification.' }, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${event.id}.json`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  const color = CLASSES[event.prediction.classKey].color;
+  const color = CLASSES[event.prediction.classKey]?.color || '#8e9ca6';
+  const confText = event.confidence === 'h' || event.confidence === 'H' ? 'High' : event.confidence === 'n' || event.confidence === 'N' ? 'Nominal' : event.confidence === 'l' || event.confidence === 'L' ? 'Low' : typeof event.confidence === 'number' ? `${event.confidence}%` : String(event.confidence || '—');
+
   return <div className="fixed inset-0 z-[2700] flex justify-end bg-[#17273330]" onMouseDown={click => {if (click.target === click.currentTarget) onClose();}}>
-    <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Observation investigation" className="flex h-full w-full max-w-[460px] flex-col bg-white shadow-2xl outline-none">
+    <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Observation investigation" className="flex h-full w-full max-w-[480px] flex-col bg-white shadow-2xl outline-none">
       <div className="flex h-[65px] shrink-0 items-center justify-between border-b border-[#e9edf0] px-6"><div className="flex items-center gap-2 text-xs font-semibold"><ScanLine size={16} className="text-[#d69364]" />Observation investigation</div><div className="flex gap-1"><button onClick={download} aria-label="Download observation evidence" title="Download real observation and evidence" className="icon-button"><FileDown size={16} /></button><button onClick={onClose} aria-label="Close observation" className="icon-button"><X size={19} /></button></div></div>
       <div className="scroll-thin flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between"><span className="section-label text-[#c1895f]">{event.mode === 'archive' ? 'Historical observation' : 'Near-real-time observation'}</span><ClassBadge classKey={event.prediction.classKey} compact /></div>
         <h2 className="mt-3 font-display text-[21px] font-semibold tracking-tight">{coordinates(event.latitude, event.longitude, 4)}</h2>
-        <p className="mt-2 text-[11px] text-[#85949e]">{formatDate(event.acquiredAt)} <span className="mx-1.5">·</span> {formatTime(event.acquiredAt)} UTC <span className="mx-1.5">·</span> {satelliteName(event.satellite)}</p>
+        <p className="mt-2 text-[11px] text-[#85949e]">{formatDate(event.acquiredAt)} <span className="mx-1.5">·</span> {formatTime(event.acquiredAt)} UTC <span className="mx-1.5">·</span> {satelliteName(event.satellite)} ({event.daynight === 'D' ? 'Day' : 'Night'})</p>
         <p className="mt-1 font-mono text-[9px] text-[#acb4bb]">{event.id}</p>
-        <div className="mt-6 grid grid-cols-3 gap-2">
-          {([['Radiative power', event.frp.toFixed(2), 'MW'], ['I4 brightness', event.brightness.toFixed(1), 'K'], ['I5 brightness', event.backgroundBrightness.toFixed(1), 'K']]).map(([label,value,unit]) => <div className="rounded-lg border border-[#e8ecef] bg-[#fafbfc] px-3 py-3.5" key={label}><div className="text-[9px] text-[#95a0a9]">{label}</div><div className="tabular mt-2 text-[20px] font-semibold tracking-tight">{value}<span className="ml-1 text-[9px] font-normal text-[#93a0a9]">{unit}</span></div></div>)}
+        <div className="mt-6 grid grid-cols-4 gap-2">
+          {[
+            ['Radiative power', event.frp.toFixed(1), 'MW'],
+            ['I4 brightness', event.brightness.toFixed(0), 'K'],
+            ['I5 brightness', event.backgroundBrightness.toFixed(0), 'K'],
+            ['Confidence', confText, ''],
+          ].map(([label,value,unit]) => <div className="rounded-lg border border-[#e8ecef] bg-[#fafbfc] px-2.5 py-3" key={label}><div className="text-[8.5px] text-[#95a0a9]">{label}</div><div className="tabular mt-1 text-[16px] font-semibold tracking-tight">{value}<span className="ml-0.5 text-[8.5px] font-normal text-[#93a0a9]">{unit}</span></div></div>)}
         </div>
         <div className="mt-2 flex items-center gap-1 text-[9px] leading-4 text-[#a3adb5]"><CircleHelp size={10} />Brightness temperature is a satellite-band measurement, not flame temperature.</div>
 
-        <section className="mt-6 rounded-xl border border-[#e7ebee] p-4">
-          <div className="flex items-center justify-between"><span className="section-label text-[#94a0aa]">Model assessment</span><span className="text-[9px] text-[#a7afb7]">XGBoost · provisional</span></div>
+        <section className="mt-5 rounded-xl border border-[#eedfd6] bg-[#fdfaf7] p-4">
+          <div className="flex items-center justify-between"><span className="section-label text-[#b37e5c]">Risk & Exposure Assessment</span><RiskBadge level={event.risk?.level} /></div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <div><span className="font-display text-[22px] font-semibold tracking-tight text-[#33424d]">{event.risk ? (event.risk.score * 100).toFixed(1) : '—'}</span><span className="ml-1 text-[10px] text-[#84929d]">/ 100 Risk Score</span></div>
+            <span className="text-[10px] text-[#8f9ca6]">Priority: <strong className="capitalize text-[#445562]">{event.risk?.level || 'Low'}</strong></span>
+          </div>
+          {event.risk?.formula && <p className="mt-2 rounded bg-white/70 px-2 py-1 font-mono text-[9px] text-[#788894] border border-[#e8ded6]">{event.risk.formula}</p>}
+          {event.risk?.factors && event.risk.factors.length > 0 && <ul className="mt-2.5 space-y-1 border-t border-[#f0e4dc] pt-2">
+            {event.risk.factors.map((factor, idx) => <li key={idx} className="flex items-center gap-2 text-[9.5px] text-[#758490]"><span className="h-1 w-1 rounded-full bg-[#c9622d]" />{factor}</li>)}
+          </ul>}
+          <p className="mt-2.5 border-t border-[#f0e4dc] pt-2 text-[8.5px] leading-4 text-[#a0aeb8]">Classification and risk are separated. Persistent fixed sources (furnaces, flares) are not automatically high-risk fires; elevated anomalies near settlements or facilities receive high priority.</p>
+        </section>
+
+        <section className="mt-5 rounded-xl border border-[#e7ebee] p-4">
+          <div className="flex items-center justify-between"><span className="section-label text-[#94a0aa]">Model assessment</span><span className="rounded bg-[#fcf5ec] px-1.5 py-0.5 text-[8.5px] font-medium text-[#b07d39]">Provisional Classification</span></div>
           <h3 className="mt-3 flex items-center gap-2 text-[13px] font-semibold" style={{color}}><span className="h-2 w-2 rounded-full" style={{background:color}} />{event.prediction.label}</h3>
+          <p className="mt-1.5 text-[9px] font-medium text-[#b07d39]">Requires Ground Verification · Not Ground-Confirmed</p>
+          {event.prediction.explanation && <p className="mt-2 text-[10px] leading-5 text-[#5e717e] bg-[#f8fafb] p-2.5 rounded border border-[#edf1f4]">{event.prediction.explanation}</p>}
           {event.prediction.abstentionReason && <p className="mt-2 text-[10px] leading-5 text-[#a38569]">Model abstained: {event.prediction.abstentionReason}. No trusted source type is assigned.</p>}
-          <div className="mt-4 space-y-3">{event.prediction.probabilities.map(item => <div key={item.key}><div className="mb-1.5 flex justify-between text-[9px]"><span className="text-[#8997a1]">{item.label}</span><span className="tabular font-medium text-[#62717d]">{(item.score * 100).toFixed(1)}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-[#f0f3f5]"><div className="h-full rounded-full" style={{width:`${item.score*100}%`,background:CLASSES[item.key as keyof typeof CLASSES]?.color || '#8e9ca6'}} /></div></div>)}</div>
+          <div className="mt-4 space-y-2.5">{event.prediction.probabilities.map(item => <div key={item.key}><div className="mb-1 flex justify-between text-[9px]"><span className="text-[#8997a1]">{item.label}</span><span className="tabular font-medium text-[#62717d]">{(item.score * 100).toFixed(1)}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-[#f0f3f5]"><div className="h-full rounded-full" style={{width:`${item.score*100}%`,background:CLASSES[item.key as keyof typeof CLASSES]?.color || '#8e9ca6'}} /></div></div>)}</div>
           {!event.prediction.probabilities.length && <p className="mt-3 text-xs text-[#98a3ac]">No model output available. Scores have not been fabricated.</p>}
           <p className="mt-4 border-t border-[#eff1f4] pt-3 text-[9px] leading-5 text-[#9aa5ae]">Uncalibrated source-type scores, not verified incident confidence. {event.prediction.featureMode || 'Model not available'}. Industrial-fire confirmation requires independent evidence.</p>
         </section>
