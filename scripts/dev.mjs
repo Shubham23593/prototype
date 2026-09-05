@@ -38,8 +38,8 @@ function freePort(port) {
 const python = existsSync('.venv/bin/python') ? '.venv/bin/python' : existsSync('.venv/Scripts/python.exe') ? '.venv/Scripts/python.exe' : 'python';
 
 const children = [
-  spawn(python, ['-m', 'uvicorn', 'ml.service:app', '--host', '0.0.0.0', '--port', mlPort], { stdio: 'inherit' }),
-  spawn('node', ['--import', 'tsx', 'server/src/index.ts'], { stdio: 'inherit', env: { ...process.env, PORT: apiPort } }),
+  spawn(python, ['-u', '-m', 'uvicorn', 'ml.service:app', '--host', '0.0.0.0', '--port', mlPort, '--reload'], { stdio: ['ignore', 'inherit', 'inherit'] }),
+  spawn('node', ['node_modules/tsx/dist/cli.mjs', 'watch', 'server/src/index.ts'], { stdio: 'inherit', env: { ...process.env, PORT: apiPort } }),
   spawn('node', ['node_modules/next/dist/bin/next', 'dev', '--hostname', '0.0.0.0', '--port', frontendPort], { stdio: 'inherit' }),
 ];
 
@@ -64,10 +64,11 @@ function stop(code = 0) {
 
 children.forEach(child => {
   child.on('error', error => {
-    console.error(error);
+    console.error('[dev.mjs] Child spawn error:', child.spawnargs, error);
     stop(1);
   });
-  child.on('exit', code => {
+  child.on('exit', (code, signal) => {
+    console.log('[dev.mjs] Child exit:', child.spawnargs, code, signal);
     if (!stopping && code !== 0) stop(code || 0);
   });
 });

@@ -1,550 +1,2098 @@
 {
   "quality": {
-    "input_rows": 316036,
-    "valid_rows": 316035,
+    "input_rows": 316468,
+    "valid_rows": 316468,
     "invalid_or_unsupported_rows": 0,
-    "duplicates_removed": 1
+    "duplicates_removed": 0
   },
   "daily": [
     {
-      "date": "2025-01-01",
-      "detections": 1308,
-      "total_frp": 3771.19,
-      "mean_frp": 2.8831727828746176
+      "date": "2008-01-01",
+      "detections": 9,
+      "total_frp": 164.8,
+      "mean_frp": 18.311111111111114
     },
     {
-      "date": "2025-01-02",
-      "detections": 1581,
-      "total_frp": 5610.16,
-      "mean_frp": 3.5484882985452244
+      "date": "2008-01-02",
+      "detections": 4,
+      "total_frp": 262.8,
+      "mean_frp": 65.7
     },
     {
-      "date": "2025-01-03",
-      "detections": 1503,
-      "total_frp": 5637.93,
-      "mean_frp": 3.7511177644710583
+      "date": "2008-01-03",
+      "detections": 22,
+      "total_frp": 305.3,
+      "mean_frp": 13.877272727272727
     },
     {
-      "date": "2025-01-04",
-      "detections": 1486,
-      "total_frp": 6299.04,
-      "mean_frp": 4.2389232839838495
+      "date": "2008-01-04",
+      "detections": 14,
+      "total_frp": 380.6,
+      "mean_frp": 27.185714285714287
     },
     {
-      "date": "2025-01-05",
-      "detections": 1235,
-      "total_frp": 4476.04,
-      "mean_frp": 3.624323886639676
+      "date": "2008-01-05",
+      "detections": 45,
+      "total_frp": 981.3,
+      "mean_frp": 21.806666666666665
     },
     {
-      "date": "2025-01-06",
-      "detections": 1131,
-      "total_frp": 3750.71,
-      "mean_frp": 3.3162776304155615
+      "date": "2008-01-06",
+      "detections": 17,
+      "total_frp": 424.29999999999995,
+      "mean_frp": 24.958823529411763
     },
     {
-      "date": "2025-01-07",
-      "detections": 1121,
-      "total_frp": 4016.24,
-      "mean_frp": 3.582729705619982
+      "date": "2008-01-08",
+      "detections": 12,
+      "total_frp": 119.7,
+      "mean_frp": 9.975
     },
     {
-      "date": "2025-01-08",
-      "detections": 1116,
-      "total_frp": 3736.69,
-      "mean_frp": 3.34828853046595
+      "date": "2008-01-09",
+      "detections": 21,
+      "total_frp": 938.6,
+      "mean_frp": 44.695238095238096
     },
     {
-      "date": "2025-01-09",
-      "detections": 1047,
-      "total_frp": 3610.46,
-      "mean_frp": 3.448385864374403
+      "date": "2008-01-10",
+      "detections": 8,
+      "total_frp": 140.3,
+      "mean_frp": 17.5375
     },
     {
-      "date": "2025-01-10",
-      "detections": 1165,
-      "total_frp": 4202.97,
-      "mean_frp": 3.6076995708154507
+      "date": "2008-01-12",
+      "detections": 21,
+      "total_frp": 383.8,
+      "mean_frp": 18.276190476190475
     },
     {
-      "date": "2025-01-11",
-      "detections": 1043,
-      "total_frp": 3829.34,
-      "mean_frp": 3.671466922339406
+      "date": "2008-01-13",
+      "detections": 1,
+      "total_frp": 18.6,
+      "mean_frp": 18.6
     },
     {
-      "date": "2025-01-12",
-      "detections": 926,
-      "total_frp": 2536.28,
-      "mean_frp": 2.738963282937365
+      "date": "2008-01-14",
+      "detections": 4,
+      "total_frp": 69.2,
+      "mean_frp": 17.3
     },
     {
-      "date": "2025-01-13",
-      "detections": 787,
-      "total_frp": 2089.38,
-      "mean_frp": 2.654866581956798
+      "date": "2008-01-16",
+      "detections": 2,
+      "total_frp": 52.0,
+      "mean_frp": 26.0
     },
     {
-      "date": "2025-01-14",
-      "detections": 636,
-      "total_frp": 2587.91,
-      "mean_frp": 4.069040880503144
+      "date": "2008-01-17",
+      "detections": 17,
+      "total_frp": 301.5,
+      "mean_frp": 17.735294117647058
     },
     {
-      "date": "2025-01-15",
-      "detections": 578,
-      "total_frp": 2294.7,
-      "mean_frp": 3.970069204152249
+      "date": "2008-01-18",
+      "detections": 2,
+      "total_frp": 58.8,
+      "mean_frp": 29.4
     },
     {
-      "date": "2025-01-16",
-      "detections": 976,
-      "total_frp": 4238.99,
-      "mean_frp": 4.3432274590163935
+      "date": "2008-01-19",
+      "detections": 13,
+      "total_frp": 684.7,
+      "mean_frp": 52.66923076923077
     },
     {
-      "date": "2025-01-17",
-      "detections": 1344,
-      "total_frp": 6410.05,
-      "mean_frp": 4.769382440476191
+      "date": "2008-01-20",
+      "detections": 9,
+      "total_frp": 364.6,
+      "mean_frp": 40.51111111111111
     },
     {
-      "date": "2025-01-18",
-      "detections": 1230,
-      "total_frp": 4765.03,
-      "mean_frp": 3.8740081300813007
+      "date": "2008-01-21",
+      "detections": 3,
+      "total_frp": 33.8,
+      "mean_frp": 11.266666666666666
     },
     {
-      "date": "2025-01-19",
-      "detections": 1212,
-      "total_frp": 4328.82,
-      "mean_frp": 3.5716336633663364
+      "date": "2008-01-22",
+      "detections": 10,
+      "total_frp": 258.9,
+      "mean_frp": 25.889999999999997
     },
     {
-      "date": "2025-01-20",
-      "detections": 1128,
-      "total_frp": 4645.47,
-      "mean_frp": 4.118324468085107
+      "date": "2008-01-24",
+      "detections": 1,
+      "total_frp": 34.1,
+      "mean_frp": 34.1
     },
     {
-      "date": "2025-01-21",
-      "detections": 1608,
-      "total_frp": 6766.47,
-      "mean_frp": 4.208003731343283
+      "date": "2008-01-26",
+      "detections": 12,
+      "total_frp": 545.1,
+      "mean_frp": 45.425000000000004
     },
     {
-      "date": "2025-01-22",
+      "date": "2008-01-27",
+      "detections": 4,
+      "total_frp": 190.60000000000002,
+      "mean_frp": 47.650000000000006
+    },
+    {
+      "date": "2008-01-28",
+      "detections": 18,
+      "total_frp": 910.9,
+      "mean_frp": 50.605555555555554
+    },
+    {
+      "date": "2008-01-29",
+      "detections": 20,
+      "total_frp": 601.5,
+      "mean_frp": 30.075
+    },
+    {
+      "date": "2008-01-30",
+      "detections": 21,
+      "total_frp": 1125.8,
+      "mean_frp": 53.60952380952381
+    },
+    {
+      "date": "2008-01-31",
+      "detections": 35,
+      "total_frp": 797.9,
+      "mean_frp": 22.797142857142855
+    },
+    {
+      "date": "2008-02-01",
+      "detections": 11,
+      "total_frp": 181.9,
+      "mean_frp": 16.536363636363635
+    },
+    {
+      "date": "2008-02-02",
+      "detections": 8,
+      "total_frp": 130.3,
+      "mean_frp": 16.2875
+    },
+    {
+      "date": "2008-02-03",
+      "detections": 11,
+      "total_frp": 496.3,
+      "mean_frp": 45.11818181818182
+    },
+    {
+      "date": "2008-02-04",
+      "detections": 52,
+      "total_frp": 595.2,
+      "mean_frp": 11.446153846153846
+    },
+    {
+      "date": "2008-02-05",
+      "detections": 6,
+      "total_frp": 187.3,
+      "mean_frp": 31.21666666666667
+    },
+    {
+      "date": "2008-02-06",
+      "detections": 63,
+      "total_frp": 1396.6,
+      "mean_frp": 22.168253968253968
+    },
+    {
+      "date": "2008-02-07",
+      "detections": 36,
+      "total_frp": 1966.3000000000002,
+      "mean_frp": 54.61944444444445
+    },
+    {
+      "date": "2008-02-08",
+      "detections": 12,
+      "total_frp": 137.6,
+      "mean_frp": 11.466666666666667
+    },
+    {
+      "date": "2008-02-09",
+      "detections": 97,
+      "total_frp": 2094.4,
+      "mean_frp": 21.59175257731959
+    },
+    {
+      "date": "2008-02-10",
+      "detections": 10,
+      "total_frp": 825.6,
+      "mean_frp": 82.56
+    },
+    {
+      "date": "2008-02-11",
+      "detections": 183,
+      "total_frp": 3755.9,
+      "mean_frp": 20.524043715846997
+    },
+    {
+      "date": "2008-02-12",
+      "detections": 2,
+      "total_frp": 72.2,
+      "mean_frp": 36.1
+    },
+    {
+      "date": "2008-02-13",
+      "detections": 150,
+      "total_frp": 3703.8,
+      "mean_frp": 24.692
+    },
+    {
+      "date": "2008-02-14",
+      "detections": 84,
+      "total_frp": 3061.7999999999997,
+      "mean_frp": 36.449999999999996
+    },
+    {
+      "date": "2008-02-15",
+      "detections": 25,
+      "total_frp": 1134.5,
+      "mean_frp": 45.38
+    },
+    {
+      "date": "2008-02-16",
+      "detections": 45,
+      "total_frp": 1478.5,
+      "mean_frp": 32.855555555555554
+    },
+    {
+      "date": "2008-02-17",
+      "detections": 3,
+      "total_frp": 44.4,
+      "mean_frp": 14.799999999999999
+    },
+    {
+      "date": "2008-02-18",
+      "detections": 21,
+      "total_frp": 261.6,
+      "mean_frp": 12.457142857142859
+    },
+    {
+      "date": "2008-02-19",
+      "detections": 2,
+      "total_frp": 68.9,
+      "mean_frp": 34.45
+    },
+    {
+      "date": "2008-02-20",
+      "detections": 5,
+      "total_frp": 60.9,
+      "mean_frp": 12.18
+    },
+    {
+      "date": "2008-02-21",
+      "detections": 8,
+      "total_frp": 387.3,
+      "mean_frp": 48.4125
+    },
+    {
+      "date": "2008-02-22",
+      "detections": 1,
+      "total_frp": 10.1,
+      "mean_frp": 10.1
+    },
+    {
+      "date": "2008-02-23",
+      "detections": 13,
+      "total_frp": 264.8,
+      "mean_frp": 20.36923076923077
+    },
+    {
+      "date": "2008-02-24",
+      "detections": 1,
+      "total_frp": 7.2,
+      "mean_frp": 7.2
+    },
+    {
+      "date": "2008-02-25",
+      "detections": 1,
+      "total_frp": 9.7,
+      "mean_frp": 9.7
+    },
+    {
+      "date": "2008-02-27",
+      "detections": 4,
+      "total_frp": 58.4,
+      "mean_frp": 14.6
+    },
+    {
+      "date": "2008-02-29",
+      "detections": 3,
+      "total_frp": 42.3,
+      "mean_frp": 14.1
+    },
+    {
+      "date": "2008-03-01",
+      "detections": 6,
+      "total_frp": 121.4,
+      "mean_frp": 20.233333333333334
+    },
+    {
+      "date": "2008-03-02",
+      "detections": 9,
+      "total_frp": 101.6,
+      "mean_frp": 11.288888888888888
+    },
+    {
+      "date": "2008-03-03",
+      "detections": 1,
+      "total_frp": 8.5,
+      "mean_frp": 8.5
+    },
+    {
+      "date": "2008-03-04",
+      "detections": 33,
+      "total_frp": 701.1,
+      "mean_frp": 21.245454545454546
+    },
+    {
+      "date": "2008-03-05",
+      "detections": 12,
+      "total_frp": 250.1,
+      "mean_frp": 20.841666666666665
+    },
+    {
+      "date": "2008-03-07",
+      "detections": 4,
+      "total_frp": 78.9,
+      "mean_frp": 19.725
+    },
+    {
+      "date": "2008-03-08",
+      "detections": 1,
+      "total_frp": 16.5,
+      "mean_frp": 16.5
+    },
+    {
+      "date": "2008-03-09",
+      "detections": 5,
+      "total_frp": 50.9,
+      "mean_frp": 10.18
+    },
+    {
+      "date": "2008-03-10",
+      "detections": 2,
+      "total_frp": 24.200000000000003,
+      "mean_frp": 12.100000000000001
+    },
+    {
+      "date": "2008-03-12",
+      "detections": 1,
+      "total_frp": 6.7,
+      "mean_frp": 6.7
+    },
+    {
+      "date": "2008-03-13",
+      "detections": 1,
+      "total_frp": 9.7,
+      "mean_frp": 9.7
+    },
+    {
+      "date": "2008-03-14",
+      "detections": 10,
+      "total_frp": 116.2,
+      "mean_frp": 11.620000000000001
+    },
+    {
+      "date": "2008-03-16",
+      "detections": 13,
+      "total_frp": 183.70000000000002,
+      "mean_frp": 14.130769230769232
+    },
+    {
+      "date": "2008-03-18",
+      "detections": 4,
+      "total_frp": 141.1,
+      "mean_frp": 35.275
+    },
+    {
+      "date": "2008-03-19",
+      "detections": 11,
+      "total_frp": 240.8,
+      "mean_frp": 21.89090909090909
+    },
+    {
+      "date": "2008-03-20",
+      "detections": 10,
+      "total_frp": 143.4,
+      "mean_frp": 14.34
+    },
+    {
+      "date": "2008-03-21",
+      "detections": 6,
+      "total_frp": 78.3,
+      "mean_frp": 13.049999999999999
+    },
+    {
+      "date": "2008-03-22",
+      "detections": 1,
+      "total_frp": 34.5,
+      "mean_frp": 34.5
+    },
+    {
+      "date": "2008-03-23",
+      "detections": 27,
+      "total_frp": 500.2,
+      "mean_frp": 18.525925925925925
+    },
+    {
+      "date": "2008-03-24",
+      "detections": 12,
+      "total_frp": 294.1,
+      "mean_frp": 24.508333333333336
+    },
+    {
+      "date": "2008-03-25",
+      "detections": 19,
+      "total_frp": 358.90000000000003,
+      "mean_frp": 18.88947368421053
+    },
+    {
+      "date": "2008-03-26",
+      "detections": 10,
+      "total_frp": 212.3,
+      "mean_frp": 21.23
+    },
+    {
+      "date": "2008-03-27",
+      "detections": 1,
+      "total_frp": 16.0,
+      "mean_frp": 16.0
+    },
+    {
+      "date": "2008-03-28",
+      "detections": 85,
+      "total_frp": 1535.2,
+      "mean_frp": 18.061176470588236
+    },
+    {
+      "date": "2008-03-29",
+      "detections": 26,
+      "total_frp": 1175.1,
+      "mean_frp": 45.19615384615384
+    },
+    {
+      "date": "2008-03-30",
+      "detections": 65,
+      "total_frp": 1013.5,
+      "mean_frp": 15.592307692307692
+    },
+    {
+      "date": "2008-03-31",
+      "detections": 4,
+      "total_frp": 158.9,
+      "mean_frp": 39.725
+    },
+    {
+      "date": "2008-04-01",
+      "detections": 3,
+      "total_frp": 62.2,
+      "mean_frp": 20.733333333333334
+    },
+    {
+      "date": "2008-04-02",
+      "detections": 1,
+      "total_frp": 15.4,
+      "mean_frp": 15.4
+    },
+    {
+      "date": "2008-04-03",
+      "detections": 32,
+      "total_frp": 468.2,
+      "mean_frp": 14.63125
+    },
+    {
+      "date": "2008-04-04",
+      "detections": 1,
+      "total_frp": 31.3,
+      "mean_frp": 31.3
+    },
+    {
+      "date": "2008-04-05",
+      "detections": 24,
+      "total_frp": 382.3,
+      "mean_frp": 15.929166666666667
+    },
+    {
+      "date": "2008-04-08",
+      "detections": 23,
+      "total_frp": 254.7,
+      "mean_frp": 11.07391304347826
+    },
+    {
+      "date": "2008-04-10",
+      "detections": 2,
+      "total_frp": 20.0,
+      "mean_frp": 10.0
+    },
+    {
+      "date": "2008-04-11",
+      "detections": 1,
+      "total_frp": 9.3,
+      "mean_frp": 9.3
+    },
+    {
+      "date": "2008-04-12",
+      "detections": 3,
+      "total_frp": 28.0,
+      "mean_frp": 9.333333333333334
+    },
+    {
+      "date": "2008-04-13",
+      "detections": 2,
+      "total_frp": 23.0,
+      "mean_frp": 11.5
+    },
+    {
+      "date": "2008-04-14",
+      "detections": 2,
+      "total_frp": 39.2,
+      "mean_frp": 19.6
+    },
+    {
+      "date": "2008-04-15",
+      "detections": 48,
+      "total_frp": 600.1,
+      "mean_frp": 12.502083333333333
+    },
+    {
+      "date": "2008-04-16",
+      "detections": 2,
+      "total_frp": 28.6,
+      "mean_frp": 14.3
+    },
+    {
+      "date": "2008-04-17",
+      "detections": 12,
+      "total_frp": 146.0,
+      "mean_frp": 12.166666666666666
+    },
+    {
+      "date": "2008-04-18",
+      "detections": 8,
+      "total_frp": 185.3,
+      "mean_frp": 23.1625
+    },
+    {
+      "date": "2008-04-19",
+      "detections": 44,
+      "total_frp": 648.5,
+      "mean_frp": 14.738636363636363
+    },
+    {
+      "date": "2008-04-20",
+      "detections": 1,
+      "total_frp": 35.6,
+      "mean_frp": 35.6
+    },
+    {
+      "date": "2008-04-21",
+      "detections": 31,
+      "total_frp": 826.3000000000001,
+      "mean_frp": 26.65483870967742
+    },
+    {
+      "date": "2008-04-22",
+      "detections": 167,
+      "total_frp": 2478.4,
+      "mean_frp": 14.840718562874253
+    },
+    {
+      "date": "2008-04-23",
+      "detections": 58,
+      "total_frp": 2132.7,
+      "mean_frp": 36.77068965517241
+    },
+    {
+      "date": "2008-04-24",
+      "detections": 347,
+      "total_frp": 5282.1,
+      "mean_frp": 15.222190201729108
+    },
+    {
+      "date": "2008-04-25",
+      "detections": 2,
+      "total_frp": 32.7,
+      "mean_frp": 16.35
+    },
+    {
+      "date": "2008-04-26",
+      "detections": 63,
+      "total_frp": 1537.4,
+      "mean_frp": 24.403174603174605
+    },
+    {
+      "date": "2008-04-27",
+      "detections": 5,
+      "total_frp": 297.1,
+      "mean_frp": 59.42
+    },
+    {
+      "date": "2008-04-28",
+      "detections": 58,
+      "total_frp": 1059.6,
+      "mean_frp": 18.268965517241377
+    },
+    {
+      "date": "2008-04-29",
+      "detections": 28,
+      "total_frp": 475.9,
+      "mean_frp": 16.99642857142857
+    },
+    {
+      "date": "2008-04-30",
+      "detections": 29,
+      "total_frp": 888.9,
+      "mean_frp": 30.651724137931033
+    },
+    {
+      "date": "2008-05-01",
+      "detections": 73,
+      "total_frp": 1159.9,
+      "mean_frp": 15.889041095890413
+    },
+    {
+      "date": "2008-05-02",
+      "detections": 9,
+      "total_frp": 107.5,
+      "mean_frp": 11.944444444444445
+    },
+    {
+      "date": "2008-05-03",
+      "detections": 3,
+      "total_frp": 55.1,
+      "mean_frp": 18.366666666666667
+    },
+    {
+      "date": "2008-05-04",
+      "detections": 4,
+      "total_frp": 117.7,
+      "mean_frp": 29.425
+    },
+    {
+      "date": "2008-05-05",
+      "detections": 50,
+      "total_frp": 693.4,
+      "mean_frp": 13.868
+    },
+    {
+      "date": "2008-05-06",
+      "detections": 136,
+      "total_frp": 3055.3,
+      "mean_frp": 22.46544117647059
+    },
+    {
+      "date": "2008-05-07",
+      "detections": 241,
+      "total_frp": 6172.6,
+      "mean_frp": 25.612448132780084
+    },
+    {
+      "date": "2008-05-08",
+      "detections": 225,
+      "total_frp": 4557.4,
+      "mean_frp": 20.25511111111111
+    },
+    {
+      "date": "2008-05-09",
+      "detections": 71,
+      "total_frp": 2397.9,
+      "mean_frp": 33.77323943661972
+    },
+    {
+      "date": "2008-05-10",
+      "detections": 313,
+      "total_frp": 5347.0,
+      "mean_frp": 17.083067092651756
+    },
+    {
+      "date": "2008-05-11",
+      "detections": 13,
+      "total_frp": 419.4,
+      "mean_frp": 32.26153846153846
+    },
+    {
+      "date": "2008-05-12",
+      "detections": 449,
+      "total_frp": 6743.7,
+      "mean_frp": 15.019376391982183
+    },
+    {
+      "date": "2008-05-13",
+      "detections": 388,
+      "total_frp": 16303.2,
+      "mean_frp": 42.01855670103093
+    },
+    {
+      "date": "2008-05-14",
+      "detections": 870,
+      "total_frp": 25790.2,
+      "mean_frp": 29.643908045977014
+    },
+    {
+      "date": "2008-05-15",
+      "detections": 1185,
+      "total_frp": 25004.7,
+      "mean_frp": 21.101012658227848
+    },
+    {
+      "date": "2008-05-16",
+      "detections": 485,
+      "total_frp": 18852.5,
+      "mean_frp": 38.871134020618555
+    },
+    {
+      "date": "2008-05-17",
+      "detections": 1201,
+      "total_frp": 23285.6,
+      "mean_frp": 19.388509575353872
+    },
+    {
+      "date": "2008-05-18",
+      "detections": 206,
+      "total_frp": 8305.9,
+      "mean_frp": 40.31990291262136
+    },
+    {
+      "date": "2008-05-19",
+      "detections": 1491,
+      "total_frp": 29718.6,
+      "mean_frp": 19.93199195171026
+    },
+    {
+      "date": "2008-05-20",
+      "detections": 212,
+      "total_frp": 10190.2,
+      "mean_frp": 48.066981132075476
+    },
+    {
+      "date": "2008-05-21",
+      "detections": 473,
+      "total_frp": 10124.0,
+      "mean_frp": 21.403805496828753
+    },
+    {
+      "date": "2008-05-22",
+      "detections": 241,
+      "total_frp": 8821.9,
+      "mean_frp": 36.605394190871365
+    },
+    {
+      "date": "2008-05-23",
+      "detections": 401,
+      "total_frp": 10268.8,
+      "mean_frp": 25.60798004987531
+    },
+    {
+      "date": "2008-05-24",
+      "detections": 201,
+      "total_frp": 6007.5,
+      "mean_frp": 29.888059701492537
+    },
+    {
+      "date": "2008-05-25",
+      "detections": 270,
+      "total_frp": 13589.4,
+      "mean_frp": 50.33111111111111
+    },
+    {
+      "date": "2008-05-26",
+      "detections": 442,
+      "total_frp": 10493.0,
+      "mean_frp": 23.739819004524886
+    },
+    {
+      "date": "2008-05-27",
+      "detections": 223,
+      "total_frp": 11130.5,
+      "mean_frp": 49.912556053811656
+    },
+    {
+      "date": "2008-05-28",
+      "detections": 2023,
+      "total_frp": 52093.7,
+      "mean_frp": 25.75071675729115
+    },
+    {
+      "date": "2008-05-29",
+      "detections": 1198,
+      "total_frp": 48728.2,
+      "mean_frp": 40.67462437395659
+    },
+    {
+      "date": "2008-05-30",
+      "detections": 884,
+      "total_frp": 30396.0,
+      "mean_frp": 34.38461538461539
+    },
+    {
+      "date": "2008-05-31",
+      "detections": 1591,
+      "total_frp": 41436.0,
+      "mean_frp": 26.04399748585795
+    },
+    {
+      "date": "2008-06-01",
+      "detections": 466,
+      "total_frp": 20278.7,
+      "mean_frp": 43.51652360515022
+    },
+    {
+      "date": "2008-06-02",
+      "detections": 1424,
+      "total_frp": 28076.0,
+      "mean_frp": 19.71629213483146
+    },
+    {
+      "date": "2008-06-03",
+      "detections": 284,
+      "total_frp": 22897.8,
+      "mean_frp": 80.62605633802816
+    },
+    {
+      "date": "2008-06-04",
+      "detections": 1169,
+      "total_frp": 38093.8,
+      "mean_frp": 32.58665526090676
+    },
+    {
+      "date": "2008-06-05",
+      "detections": 1306,
+      "total_frp": 67447.5,
+      "mean_frp": 51.64433384379785
+    },
+    {
+      "date": "2008-06-06",
+      "detections": 2555,
+      "total_frp": 96446.7,
+      "mean_frp": 37.74821917808219
+    },
+    {
+      "date": "2008-06-07",
+      "detections": 2524,
+      "total_frp": 92397.2,
+      "mean_frp": 36.607448494453244
+    },
+    {
+      "date": "2008-06-08",
+      "detections": 945,
+      "total_frp": 50051.5,
+      "mean_frp": 52.96455026455026
+    },
+    {
+      "date": "2008-06-09",
+      "detections": 2960,
+      "total_frp": 98541.8,
+      "mean_frp": 33.29114864864865
+    },
+    {
+      "date": "2008-06-10",
+      "detections": 846,
+      "total_frp": 64975.0,
+      "mean_frp": 76.80260047281324
+    },
+    {
+      "date": "2008-06-11",
+      "detections": 2404,
+      "total_frp": 60714.4,
+      "mean_frp": 25.25557404326123
+    },
+    {
+      "date": "2008-06-12",
+      "detections": 816,
+      "total_frp": 45686.7,
+      "mean_frp": 55.98860294117647
+    },
+    {
+      "date": "2008-06-13",
+      "detections": 3855,
+      "total_frp": 138159.6,
+      "mean_frp": 35.839066147859924
+    },
+    {
+      "date": "2008-06-14",
+      "detections": 2626,
+      "total_frp": 139632.4,
+      "mean_frp": 53.17303884234577
+    },
+    {
+      "date": "2008-06-15",
+      "detections": 1610,
+      "total_frp": 67046.6,
+      "mean_frp": 41.64385093167702
+    },
+    {
+      "date": "2008-06-16",
+      "detections": 2983,
+      "total_frp": 92435.4,
+      "mean_frp": 30.987395239691583
+    },
+    {
+      "date": "2008-06-17",
+      "detections": 810,
+      "total_frp": 63504.0,
+      "mean_frp": 78.4
+    },
+    {
+      "date": "2008-06-18",
+      "detections": 2906,
+      "total_frp": 71283.9,
+      "mean_frp": 24.5299036476256
+    },
+    {
+      "date": "2008-06-19",
+      "detections": 949,
+      "total_frp": 74335.0,
+      "mean_frp": 78.32982086406744
+    },
+    {
+      "date": "2008-06-20",
+      "detections": 2890,
+      "total_frp": 127520.4,
+      "mean_frp": 44.12470588235294
+    },
+    {
+      "date": "2008-06-21",
       "detections": 1480,
-      "total_frp": 5518.24,
-      "mean_frp": 3.7285405405405405
+      "total_frp": 73009.4,
+      "mean_frp": 49.33067567567567
     },
     {
-      "date": "2025-01-23",
-      "detections": 1273,
-      "total_frp": 4889.86,
-      "mean_frp": 3.841209740769835
+      "date": "2008-06-22",
+      "detections": 2132,
+      "total_frp": 102377.7,
+      "mean_frp": 48.019559099437146
     },
     {
-      "date": "2025-01-24",
-      "detections": 1064,
-      "total_frp": 4937.45,
-      "mean_frp": 4.640460526315789
+      "date": "2008-06-23",
+      "detections": 2408,
+      "total_frp": 125568.9,
+      "mean_frp": 52.146553156146176
     },
     {
-      "date": "2025-01-25",
-      "detections": 1405,
-      "total_frp": 5813.4,
-      "mean_frp": 4.137651245551601
-    },
-    {
-      "date": "2025-01-26",
-      "detections": 1964,
-      "total_frp": 7745.89,
-      "mean_frp": 3.9439358452138493
-    },
-    {
-      "date": "2025-01-27",
-      "detections": 1998,
-      "total_frp": 8246.14,
-      "mean_frp": 4.127197197197197
-    },
-    {
-      "date": "2025-01-28",
-      "detections": 1551,
-      "total_frp": 5575.83,
-      "mean_frp": 3.594990328820116
-    },
-    {
-      "date": "2025-01-29",
-      "detections": 1119,
-      "total_frp": 4448.57,
-      "mean_frp": 3.975487042001787
-    },
-    {
-      "date": "2025-01-30",
-      "detections": 1006,
-      "total_frp": 4020.61,
-      "mean_frp": 3.996630218687873
-    },
-    {
-      "date": "2025-01-31",
-      "detections": 1324,
-      "total_frp": 4916.98,
-      "mean_frp": 3.713731117824773
-    },
-    {
-      "date": "2025-02-01",
-      "detections": 1658,
-      "total_frp": 6321.45,
-      "mean_frp": 3.8126960193003616
-    },
-    {
-      "date": "2025-02-02",
-      "detections": 1740,
-      "total_frp": 6983.13,
-      "mean_frp": 4.013293103448276
-    },
-    {
-      "date": "2025-02-03",
-      "detections": 1541,
-      "total_frp": 6769.31,
-      "mean_frp": 4.392803374432187
-    },
-    {
-      "date": "2025-02-04",
-      "detections": 1775,
-      "total_frp": 7573.72,
-      "mean_frp": 4.266884507042254
-    },
-    {
-      "date": "2025-02-05",
-      "detections": 1633,
-      "total_frp": 7161.27,
-      "mean_frp": 4.385345988977343
-    },
-    {
-      "date": "2025-02-06",
-      "detections": 2795,
-      "total_frp": 13022.84,
-      "mean_frp": 4.659334525939177
-    },
-    {
-      "date": "2025-02-07",
-      "detections": 2512,
-      "total_frp": 13157.29,
-      "mean_frp": 5.237774681528663
-    },
-    {
-      "date": "2025-02-08",
-      "detections": 2402,
-      "total_frp": 20925.45,
-      "mean_frp": 8.71167776852623
-    },
-    {
-      "date": "2025-02-09",
-      "detections": 1772,
-      "total_frp": 8307.77,
-      "mean_frp": 4.688357787810384
-    },
-    {
-      "date": "2025-02-10",
-      "detections": 1808,
-      "total_frp": 9514.66,
-      "mean_frp": 5.262533185840708
-    },
-    {
-      "date": "2025-02-11",
+      "date": "2008-06-24",
       "detections": 2341,
-      "total_frp": 14406.79,
-      "mean_frp": 6.154117898334046
+      "total_frp": 118692.9,
+      "mean_frp": 50.701794105083295
     },
     {
-      "date": "2025-02-12",
-      "detections": 2374,
-      "total_frp": 12843.43,
-      "mean_frp": 5.410037910699242
+      "date": "2008-06-25",
+      "detections": 4914,
+      "total_frp": 180994.4,
+      "mean_frp": 36.832397232397234
     },
     {
-      "date": "2025-02-13",
-      "detections": 2848,
-      "total_frp": 14573.74,
-      "mean_frp": 5.117183988764045
+      "date": "2008-06-26",
+      "detections": 1610,
+      "total_frp": 107641.2,
+      "mean_frp": 66.85788819875776
     },
     {
-      "date": "2025-02-14",
-      "detections": 2589,
-      "total_frp": 12348.48,
-      "mean_frp": 4.769594438006952
+      "date": "2008-06-27",
+      "detections": 4642,
+      "total_frp": 161755.4,
+      "mean_frp": 34.84605773373546
     },
     {
-      "date": "2025-02-15",
-      "detections": 2694,
-      "total_frp": 16165.45,
-      "mean_frp": 6.000538233110617
+      "date": "2008-06-28",
+      "detections": 1846,
+      "total_frp": 136582.1,
+      "mean_frp": 73.98813651137596
     },
     {
-      "date": "2025-02-16",
-      "detections": 2858,
-      "total_frp": 14653.83,
-      "mean_frp": 5.127302309307208
+      "date": "2008-06-29",
+      "detections": 2666,
+      "total_frp": 105525.3,
+      "mean_frp": 39.58188297074269
     },
     {
-      "date": "2025-02-17",
-      "detections": 2577,
-      "total_frp": 14042.66,
-      "mean_frp": 5.449227784245246
+      "date": "2008-06-30",
+      "detections": 2245,
+      "total_frp": 117752.4,
+      "mean_frp": 52.45095768374165
     },
     {
-      "date": "2025-02-18",
-      "detections": 2509,
-      "total_frp": 14156.92,
-      "mean_frp": 5.642455161418892
+      "date": "2008-07-01",
+      "detections": 2418,
+      "total_frp": 122024.3,
+      "mean_frp": 50.46497105045492
     },
     {
-      "date": "2025-02-19",
-      "detections": 1669,
-      "total_frp": 8424.53,
-      "mean_frp": 5.047651288196525
+      "date": "2008-07-02",
+      "detections": 3653,
+      "total_frp": 126956.9,
+      "mean_frp": 34.754147276211334
     },
     {
-      "date": "2025-02-20",
-      "detections": 1699,
-      "total_frp": 8852.57,
-      "mean_frp": 5.210459093584461
+      "date": "2008-07-03",
+      "detections": 968,
+      "total_frp": 69565.2,
+      "mean_frp": 71.86487603305785
     },
     {
-      "date": "2025-02-21",
-      "detections": 1945,
-      "total_frp": 10307.58,
-      "mean_frp": 5.299526992287918
+      "date": "2008-07-04",
+      "detections": 3387,
+      "total_frp": 97178.4,
+      "mean_frp": 28.69158547387068
     },
     {
-      "date": "2025-02-22",
-      "detections": 2924,
-      "total_frp": 13205.8,
-      "mean_frp": 4.516347469220246
+      "date": "2008-07-05",
+      "detections": 1229,
+      "total_frp": 108204.1,
+      "mean_frp": 88.04239218877136
     },
     {
-      "date": "2025-02-23",
-      "detections": 3132,
-      "total_frp": 13363.42,
-      "mean_frp": 4.266736909323116
+      "date": "2008-07-06",
+      "detections": 1585,
+      "total_frp": 49569.3,
+      "mean_frp": 31.274006309148266
     },
     {
-      "date": "2025-02-24",
-      "detections": 3366,
-      "total_frp": 17483.16,
-      "mean_frp": 5.194046345811052
+      "date": "2008-07-07",
+      "detections": 1124,
+      "total_frp": 56581.0,
+      "mean_frp": 50.33896797153025
     },
     {
-      "date": "2025-02-25",
-      "detections": 1852,
-      "total_frp": 12762.66,
-      "mean_frp": 6.891285097192225
+      "date": "2008-07-08",
+      "detections": 1773,
+      "total_frp": 68691.6,
+      "mean_frp": 38.74314720812183
     },
     {
-      "date": "2025-02-26",
-      "detections": 2708,
-      "total_frp": 16604.95,
-      "mean_frp": 6.131813146233383
+      "date": "2008-07-09",
+      "detections": 2093,
+      "total_frp": 110209.0,
+      "mean_frp": 52.65599617773531
     },
     {
-      "date": "2025-02-27",
-      "detections": 3007,
-      "total_frp": 18271.61,
-      "mean_frp": 6.076358496840705
+      "date": "2008-07-10",
+      "detections": 1721,
+      "total_frp": 126459.2,
+      "mean_frp": 73.48006972690297
     },
     {
-      "date": "2025-02-28",
-      "detections": 2678,
-      "total_frp": 14317.38,
-      "mean_frp": 5.34629574309186
+      "date": "2008-07-11",
+      "detections": 3788,
+      "total_frp": 160310.4,
+      "mean_frp": 42.32059134107708
     },
     {
-      "date": "2025-03-01",
-      "detections": 2737,
-      "total_frp": 13241.16,
-      "mean_frp": 4.837837047862624
+      "date": "2008-07-12",
+      "detections": 1283,
+      "total_frp": 115895.7,
+      "mean_frp": 90.33180046765393
     },
     {
-      "date": "2025-03-02",
-      "detections": 2139,
-      "total_frp": 10027.82,
-      "mean_frp": 4.6880878915381015
+      "date": "2008-07-13",
+      "detections": 3059,
+      "total_frp": 128496.1,
+      "mean_frp": 42.00591696632887
     },
     {
-      "date": "2025-03-03",
-      "detections": 2640,
-      "total_frp": 20093.69,
-      "mean_frp": 7.611246212121212
+      "date": "2008-07-14",
+      "detections": 2254,
+      "total_frp": 168250.3,
+      "mean_frp": 74.64520851818988
     },
     {
-      "date": "2025-03-04",
-      "detections": 4230,
-      "total_frp": 36888.47,
-      "mean_frp": 8.720678486997636
+      "date": "2008-07-15",
+      "detections": 5082,
+      "total_frp": 244395.8,
+      "mean_frp": 48.09047619047619
     },
     {
-      "date": "2025-03-05",
-      "detections": 7199,
-      "total_frp": 41057.79,
-      "mean_frp": 5.703262953187943
+      "date": "2008-07-16",
+      "detections": 2974,
+      "total_frp": 167855.6,
+      "mean_frp": 56.44102219233356
     },
     {
-      "date": "2025-03-06",
-      "detections": 12116,
-      "total_frp": 85194.2,
-      "mean_frp": 7.031545064377682
+      "date": "2008-07-17",
+      "detections": 2961,
+      "total_frp": 171373.4,
+      "mean_frp": 57.87686592367443
     },
     {
-      "date": "2025-03-07",
-      "detections": 8533,
-      "total_frp": 72295.58,
-      "mean_frp": 8.472469237079574
+      "date": "2008-07-18",
+      "detections": 4120,
+      "total_frp": 173042.0,
+      "mean_frp": 42.00048543689321
     },
     {
-      "date": "2025-03-08",
-      "detections": 6065,
-      "total_frp": 52600.12,
-      "mean_frp": 8.672732069249795
+      "date": "2008-07-19",
+      "detections": 2028,
+      "total_frp": 164933.9,
+      "mean_frp": 81.32835305719921
     },
     {
-      "date": "2025-03-09",
-      "detections": 3779,
-      "total_frp": 24202.43,
-      "mean_frp": 6.40445355914263
+      "date": "2008-07-20",
+      "detections": 3566,
+      "total_frp": 157135.6,
+      "mean_frp": 44.0649467190129
     },
     {
-      "date": "2025-03-10",
-      "detections": 5530,
-      "total_frp": 88172.46,
-      "mean_frp": 15.9443869801085
+      "date": "2008-07-21",
+      "detections": 1478,
+      "total_frp": 137696.7,
+      "mean_frp": 93.16420838971584
     },
     {
-      "date": "2025-03-11",
-      "detections": 8262,
-      "total_frp": 175403.42,
-      "mean_frp": 21.23014040183975
+      "date": "2008-07-22",
+      "detections": 4736,
+      "total_frp": 247697.7,
+      "mean_frp": 52.30103462837838
     },
     {
-      "date": "2025-03-12",
-      "detections": 6810,
-      "total_frp": 62363.27,
-      "mean_frp": 9.157602055800293
+      "date": "2008-07-23",
+      "detections": 2198,
+      "total_frp": 131352.9,
+      "mean_frp": 59.76019108280254
     },
     {
-      "date": "2025-03-13",
-      "detections": 6781,
-      "total_frp": 75410.03,
-      "mean_frp": 11.120783070343608
+      "date": "2008-07-24",
+      "detections": 3422,
+      "total_frp": 195977.6,
+      "mean_frp": 57.26990064289889
     },
     {
-      "date": "2025-03-14",
-      "detections": 6545,
-      "total_frp": 86395.49,
-      "mean_frp": 13.200227654698244
+      "date": "2008-07-25",
+      "detections": 2743,
+      "total_frp": 112800.9,
+      "mean_frp": 41.1231862923806
     },
     {
-      "date": "2025-03-15",
-      "detections": 7122,
-      "total_frp": 85390.7,
-      "mean_frp": 11.98970794720584
+      "date": "2008-07-26",
+      "detections": 2076,
+      "total_frp": 156287.0,
+      "mean_frp": 75.28275529865125
     },
     {
-      "date": "2025-03-16",
-      "detections": 8401,
-      "total_frp": 42436.49,
-      "mean_frp": 5.051361742649684
+      "date": "2008-07-27",
+      "detections": 2745,
+      "total_frp": 113863.2,
+      "mean_frp": 41.48021857923497
     },
     {
-      "date": "2025-03-17",
-      "detections": 9338,
-      "total_frp": 51231.09,
-      "mean_frp": 5.486302206039837
+      "date": "2008-07-28",
+      "detections": 1598,
+      "total_frp": 155070.6,
+      "mean_frp": 97.04042553191489
     },
     {
-      "date": "2025-03-18",
-      "detections": 9590,
-      "total_frp": 56372.21,
-      "mean_frp": 5.878228362877998
+      "date": "2008-07-29",
+      "detections": 5052,
+      "total_frp": 236354.8,
+      "mean_frp": 46.78440221694378
     },
     {
-      "date": "2025-03-19",
-      "detections": 6565,
-      "total_frp": 48164.72,
-      "mean_frp": 7.336591012947449
+      "date": "2008-07-30",
+      "detections": 2002,
+      "total_frp": 138894.9,
+      "mean_frp": 69.37807192807192
     },
     {
-      "date": "2025-03-20",
-      "detections": 5379,
-      "total_frp": 50828.53,
-      "mean_frp": 9.449438557352668
+      "date": "2008-07-31",
+      "detections": 4744,
+      "total_frp": 238168.5,
+      "mean_frp": 50.20415261382799
     },
     {
-      "date": "2025-03-21",
-      "detections": 3806,
-      "total_frp": 20511.32,
-      "mean_frp": 5.3892065160273255
+      "date": "2008-08-01",
+      "detections": 2354,
+      "total_frp": 148103.6,
+      "mean_frp": 62.915717926932885
     },
     {
-      "date": "2025-03-22",
-      "detections": 3130,
-      "total_frp": 19074.0,
-      "mean_frp": 6.0939297124600635
+      "date": "2008-08-02",
+      "detections": 3016,
+      "total_frp": 193473.7,
+      "mean_frp": 64.14910477453581
     },
     {
-      "date": "2025-03-23",
-      "detections": 3465,
-      "total_frp": 19737.55,
-      "mean_frp": 5.696262626262626
+      "date": "2008-08-03",
+      "detections": 2765,
+      "total_frp": 124282.1,
+      "mean_frp": 44.94831826401447
     },
     {
-      "date": "2025-03-24",
-      "detections": 4763,
-      "total_frp": 38744.59,
-      "mean_frp": 8.134492966617676
+      "date": "2008-08-04",
+      "detections": 2211,
+      "total_frp": 194301.3,
+      "mean_frp": 87.87937584803255
     },
     {
-      "date": "2025-03-25",
-      "detections": 6760,
-      "total_frp": 65627.42,
-      "mean_frp": 9.70819822485207
+      "date": "2008-08-05",
+      "detections": 4419,
+      "total_frp": 186740.0,
+      "mean_frp": 42.258429508938676
     },
     {
-      "date": "2025-03-26",
-      "detections": 8102,
-      "total_frp": 72410.82,
-      "mean_frp": 8.937400641816836
+      "date": "2008-08-06",
+      "detections": 1329,
+      "total_frp": 105964.7,
+      "mean_frp": 79.73265613243039
     },
     {
-      "date": "2025-03-27",
-      "detections": 11666,
-      "total_frp": 82256.66,
-      "mean_frp": 7.05097376992971
+      "date": "2008-08-07",
+      "detections": 4143,
+      "total_frp": 203548.1,
+      "mean_frp": 49.13060584117789
     },
     {
-      "date": "2025-03-28",
-      "detections": 11115,
-      "total_frp": 69188.1,
-      "mean_frp": 6.224750337381916
+      "date": "2008-08-08",
+      "detections": 1732,
+      "total_frp": 141607.9,
+      "mean_frp": 81.75975750577366
     },
     {
-      "date": "2025-03-29",
-      "detections": 11538,
-      "total_frp": 100153.54,
-      "mean_frp": 8.680320679493846
+      "date": "2008-08-09",
+      "detections": 3673,
+      "total_frp": 199583.3,
+      "mean_frp": 54.33795262728015
     },
     {
-      "date": "2025-03-30",
-      "detections": 9571,
-      "total_frp": 51463.98,
-      "mean_frp": 5.37707449587295
+      "date": "2008-08-10",
+      "detections": 1310,
+      "total_frp": 64303.1,
+      "mean_frp": 49.086335877862595
     },
     {
-      "date": "2025-03-31",
-      "detections": 8607,
-      "total_frp": 49118.93,
-      "mean_frp": 5.706858371093296
+      "date": "2008-08-11",
+      "detections": 1551,
+      "total_frp": 118512.4,
+      "mean_frp": 76.41031592520955
+    },
+    {
+      "date": "2008-08-12",
+      "detections": 3433,
+      "total_frp": 158756.9,
+      "mean_frp": 46.24436353043985
+    },
+    {
+      "date": "2008-08-13",
+      "detections": 961,
+      "total_frp": 94999.7,
+      "mean_frp": 98.85504682622268
+    },
+    {
+      "date": "2008-08-14",
+      "detections": 2877,
+      "total_frp": 110837.0,
+      "mean_frp": 38.52519986096628
+    },
+    {
+      "date": "2008-08-15",
+      "detections": 862,
+      "total_frp": 70297.2,
+      "mean_frp": 81.55127610208817
+    },
+    {
+      "date": "2008-08-16",
+      "detections": 2258,
+      "total_frp": 100111.6,
+      "mean_frp": 44.33640389725421
+    },
+    {
+      "date": "2008-08-17",
+      "detections": 1008,
+      "total_frp": 55203.4,
+      "mean_frp": 54.765277777777776
+    },
+    {
+      "date": "2008-08-18",
+      "detections": 2357,
+      "total_frp": 147243.6,
+      "mean_frp": 62.47076792532881
+    },
+    {
+      "date": "2008-08-19",
+      "detections": 2269,
+      "total_frp": 98636.7,
+      "mean_frp": 43.47144116350815
+    },
+    {
+      "date": "2008-08-20",
+      "detections": 1507,
+      "total_frp": 98922.2,
+      "mean_frp": 65.64180491041805
+    },
+    {
+      "date": "2008-08-21",
+      "detections": 3419,
+      "total_frp": 127807.2,
+      "mean_frp": 37.38145656624744
+    },
+    {
+      "date": "2008-08-22",
+      "detections": 1381,
+      "total_frp": 90376.4,
+      "mean_frp": 65.4427226647357
+    },
+    {
+      "date": "2008-08-23",
+      "detections": 4661,
+      "total_frp": 178263.9,
+      "mean_frp": 38.24584853035829
+    },
+    {
+      "date": "2008-08-24",
+      "detections": 892,
+      "total_frp": 45192.4,
+      "mean_frp": 50.66412556053812
+    },
+    {
+      "date": "2008-08-25",
+      "detections": 2318,
+      "total_frp": 101016.0,
+      "mean_frp": 43.578947368421055
+    },
+    {
+      "date": "2008-08-26",
+      "detections": 2428,
+      "total_frp": 112045.0,
+      "mean_frp": 46.14703459637562
+    },
+    {
+      "date": "2008-08-27",
+      "detections": 1270,
+      "total_frp": 76111.6,
+      "mean_frp": 59.930393700787405
+    },
+    {
+      "date": "2008-08-28",
+      "detections": 2541,
+      "total_frp": 74015.4,
+      "mean_frp": 29.128453364817
+    },
+    {
+      "date": "2008-08-29",
+      "detections": 746,
+      "total_frp": 52535.8,
+      "mean_frp": 70.42332439678285
+    },
+    {
+      "date": "2008-08-30",
+      "detections": 2691,
+      "total_frp": 90090.2,
+      "mean_frp": 33.47833519137867
+    },
+    {
+      "date": "2008-08-31",
+      "detections": 668,
+      "total_frp": 45531.6,
+      "mean_frp": 68.16107784431138
+    },
+    {
+      "date": "2008-09-01",
+      "detections": 3678,
+      "total_frp": 150527.7,
+      "mean_frp": 40.92650897226754
+    },
+    {
+      "date": "2008-09-02",
+      "detections": 2002,
+      "total_frp": 96469.8,
+      "mean_frp": 48.186713286713285
+    },
+    {
+      "date": "2008-09-03",
+      "detections": 1641,
+      "total_frp": 59598.3,
+      "mean_frp": 36.318281535649
+    },
+    {
+      "date": "2008-09-04",
+      "detections": 2084,
+      "total_frp": 70557.1,
+      "mean_frp": 33.85657389635317
+    },
+    {
+      "date": "2008-09-05",
+      "detections": 654,
+      "total_frp": 37432.1,
+      "mean_frp": 57.23562691131498
+    },
+    {
+      "date": "2008-09-06",
+      "detections": 3327,
+      "total_frp": 105377.4,
+      "mean_frp": 31.673399458972046
+    },
+    {
+      "date": "2008-09-07",
+      "detections": 817,
+      "total_frp": 52945.9,
+      "mean_frp": 64.80526315789474
+    },
+    {
+      "date": "2008-09-08",
+      "detections": 3756,
+      "total_frp": 146261.3,
+      "mean_frp": 38.94070820021299
+    },
+    {
+      "date": "2008-09-09",
+      "detections": 1671,
+      "total_frp": 125917.9,
+      "mean_frp": 75.35481747456612
+    },
+    {
+      "date": "2008-09-10",
+      "detections": 3266,
+      "total_frp": 188048.2,
+      "mean_frp": 57.577526025719536
+    },
+    {
+      "date": "2008-09-11",
+      "detections": 3328,
+      "total_frp": 173748.6,
+      "mean_frp": 52.20811298076923
+    },
+    {
+      "date": "2008-09-12",
+      "detections": 2769,
+      "total_frp": 172215.0,
+      "mean_frp": 62.193932827735644
+    },
+    {
+      "date": "2008-09-13",
+      "detections": 3586,
+      "total_frp": 125255.9,
+      "mean_frp": 34.92914110429448
+    },
+    {
+      "date": "2008-09-14",
+      "detections": 1307,
+      "total_frp": 86418.9,
+      "mean_frp": 66.12004590665646
+    },
+    {
+      "date": "2008-09-15",
+      "detections": 3842,
+      "total_frp": 159120.2,
+      "mean_frp": 41.41598125976054
+    },
+    {
+      "date": "2008-09-16",
+      "detections": 1376,
+      "total_frp": 97655.6,
+      "mean_frp": 70.97063953488373
+    },
+    {
+      "date": "2008-09-17",
+      "detections": 3380,
+      "total_frp": 161496.7,
+      "mean_frp": 47.780088757396456
+    },
+    {
+      "date": "2008-09-18",
+      "detections": 2319,
+      "total_frp": 161407.9,
+      "mean_frp": 69.6023717119448
+    },
+    {
+      "date": "2008-09-19",
+      "detections": 2646,
+      "total_frp": 176135.4,
+      "mean_frp": 66.56666666666666
+    },
+    {
+      "date": "2008-09-20",
+      "detections": 2131,
+      "total_frp": 100541.7,
+      "mean_frp": 47.180525574847486
+    },
+    {
+      "date": "2008-09-21",
+      "detections": 1083,
+      "total_frp": 76986.5,
+      "mean_frp": 71.08633425669437
+    },
+    {
+      "date": "2008-09-22",
+      "detections": 3060,
+      "total_frp": 139693.1,
+      "mean_frp": 45.651339869281045
+    },
+    {
+      "date": "2008-09-23",
+      "detections": 845,
+      "total_frp": 62647.0,
+      "mean_frp": 74.13846153846154
+    },
+    {
+      "date": "2008-09-24",
+      "detections": 2998,
+      "total_frp": 152028.0,
+      "mean_frp": 50.7098065376918
+    },
+    {
+      "date": "2008-09-25",
+      "detections": 1912,
+      "total_frp": 154775.5,
+      "mean_frp": 80.94952928870293
+    },
+    {
+      "date": "2008-09-26",
+      "detections": 2362,
+      "total_frp": 128624.0,
+      "mean_frp": 54.45554614733277
+    },
+    {
+      "date": "2008-09-27",
+      "detections": 1942,
+      "total_frp": 89275.4,
+      "mean_frp": 45.970854788877446
+    },
+    {
+      "date": "2008-09-28",
+      "detections": 1467,
+      "total_frp": 122624.3,
+      "mean_frp": 83.58847989093388
+    },
+    {
+      "date": "2008-09-29",
+      "detections": 1697,
+      "total_frp": 79469.5,
+      "mean_frp": 46.82940483205657
+    },
+    {
+      "date": "2008-09-30",
+      "detections": 1053,
+      "total_frp": 81759.4,
+      "mean_frp": 77.64425451092117
+    },
+    {
+      "date": "2008-10-01",
+      "detections": 1542,
+      "total_frp": 83318.2,
+      "mean_frp": 54.0325551232166
+    },
+    {
+      "date": "2008-10-02",
+      "detections": 1046,
+      "total_frp": 69352.5,
+      "mean_frp": 66.30258126195028
+    },
+    {
+      "date": "2008-10-03",
+      "detections": 1445,
+      "total_frp": 83122.1,
+      "mean_frp": 57.5239446366782
+    },
+    {
+      "date": "2008-10-04",
+      "detections": 1472,
+      "total_frp": 85024.1,
+      "mean_frp": 57.760937500000004
+    },
+    {
+      "date": "2008-10-05",
+      "detections": 360,
+      "total_frp": 20595.5,
+      "mean_frp": 57.209722222222226
+    },
+    {
+      "date": "2008-10-06",
+      "detections": 1217,
+      "total_frp": 55656.7,
+      "mean_frp": 45.732703368940015
+    },
+    {
+      "date": "2008-10-07",
+      "detections": 701,
+      "total_frp": 44830.0,
+      "mean_frp": 63.951497860199716
+    },
+    {
+      "date": "2008-10-08",
+      "detections": 913,
+      "total_frp": 40635.1,
+      "mean_frp": 44.50722891566265
+    },
+    {
+      "date": "2008-10-09",
+      "detections": 296,
+      "total_frp": 16694.9,
+      "mean_frp": 56.40168918918919
+    },
+    {
+      "date": "2008-10-10",
+      "detections": 911,
+      "total_frp": 44410.9,
+      "mean_frp": 48.74961580680571
+    },
+    {
+      "date": "2008-10-11",
+      "detections": 723,
+      "total_frp": 52275.3,
+      "mean_frp": 72.30331950207469
+    },
+    {
+      "date": "2008-10-12",
+      "detections": 254,
+      "total_frp": 11305.7,
+      "mean_frp": 44.51062992125985
+    },
+    {
+      "date": "2008-10-13",
+      "detections": 368,
+      "total_frp": 13805.7,
+      "mean_frp": 37.51548913043479
+    },
+    {
+      "date": "2008-10-14",
+      "detections": 190,
+      "total_frp": 9582.4,
+      "mean_frp": 50.433684210526316
+    },
+    {
+      "date": "2008-10-15",
+      "detections": 400,
+      "total_frp": 14542.3,
+      "mean_frp": 36.35575
+    },
+    {
+      "date": "2008-10-16",
+      "detections": 126,
+      "total_frp": 7606.0,
+      "mean_frp": 60.36507936507937
+    },
+    {
+      "date": "2008-10-17",
+      "detections": 175,
+      "total_frp": 6483.2,
+      "mean_frp": 37.04685714285714
+    },
+    {
+      "date": "2008-10-18",
+      "detections": 87,
+      "total_frp": 3810.8,
+      "mean_frp": 43.802298850574715
+    },
+    {
+      "date": "2008-10-19",
+      "detections": 76,
+      "total_frp": 2861.4,
+      "mean_frp": 37.65
+    },
+    {
+      "date": "2008-10-20",
+      "detections": 34,
+      "total_frp": 1516.8999999999999,
+      "mean_frp": 44.614705882352936
+    },
+    {
+      "date": "2008-10-21",
+      "detections": 64,
+      "total_frp": 2031.5,
+      "mean_frp": 31.7421875
+    },
+    {
+      "date": "2008-10-22",
+      "detections": 216,
+      "total_frp": 5488.2,
+      "mean_frp": 25.40833333333333
+    },
+    {
+      "date": "2008-10-23",
+      "detections": 35,
+      "total_frp": 1812.4,
+      "mean_frp": 51.78285714285715
+    },
+    {
+      "date": "2008-10-24",
+      "detections": 124,
+      "total_frp": 2748.0,
+      "mean_frp": 22.161290322580644
+    },
+    {
+      "date": "2008-10-25",
+      "detections": 43,
+      "total_frp": 2307.3,
+      "mean_frp": 53.65813953488372
+    },
+    {
+      "date": "2008-10-26",
+      "detections": 216,
+      "total_frp": 7336.0,
+      "mean_frp": 33.96296296296296
+    },
+    {
+      "date": "2008-10-27",
+      "detections": 72,
+      "total_frp": 4548.7,
+      "mean_frp": 63.17638888888889
+    },
+    {
+      "date": "2008-10-28",
+      "detections": 98,
+      "total_frp": 4015.7,
+      "mean_frp": 40.97653061224489
+    },
+    {
+      "date": "2008-10-29",
+      "detections": 185,
+      "total_frp": 6863.9,
+      "mean_frp": 37.10216216216216
+    },
+    {
+      "date": "2008-10-30",
+      "detections": 130,
+      "total_frp": 4969.3,
+      "mean_frp": 38.22538461538462
+    },
+    {
+      "date": "2008-10-31",
+      "detections": 168,
+      "total_frp": 4739.1,
+      "mean_frp": 28.208928571428572
+    },
+    {
+      "date": "2008-11-01",
+      "detections": 48,
+      "total_frp": 5664.3,
+      "mean_frp": 118.00625000000001
+    },
+    {
+      "date": "2008-11-02",
+      "detections": 63,
+      "total_frp": 2109.2,
+      "mean_frp": 33.479365079365074
+    },
+    {
+      "date": "2008-11-03",
+      "detections": 54,
+      "total_frp": 3297.4,
+      "mean_frp": 61.06296296296296
+    },
+    {
+      "date": "2008-11-04",
+      "detections": 51,
+      "total_frp": 2450.4,
+      "mean_frp": 48.04705882352941
+    },
+    {
+      "date": "2008-11-05",
+      "detections": 27,
+      "total_frp": 702.8,
+      "mean_frp": 26.02962962962963
+    },
+    {
+      "date": "2008-11-06",
+      "detections": 15,
+      "total_frp": 490.4,
+      "mean_frp": 32.693333333333335
+    },
+    {
+      "date": "2008-11-07",
+      "detections": 22,
+      "total_frp": 386.8,
+      "mean_frp": 17.581818181818182
+    },
+    {
+      "date": "2008-11-08",
+      "detections": 5,
+      "total_frp": 159.6,
+      "mean_frp": 31.919999999999998
+    },
+    {
+      "date": "2008-11-09",
+      "detections": 2,
+      "total_frp": 12.5,
+      "mean_frp": 6.25
+    },
+    {
+      "date": "2008-11-10",
+      "detections": 2,
+      "total_frp": 43.6,
+      "mean_frp": 21.8
+    },
+    {
+      "date": "2008-11-11",
+      "detections": 10,
+      "total_frp": 127.0,
+      "mean_frp": 12.7
+    },
+    {
+      "date": "2008-11-12",
+      "detections": 63,
+      "total_frp": 2778.7,
+      "mean_frp": 44.1063492063492
+    },
+    {
+      "date": "2008-11-13",
+      "detections": 50,
+      "total_frp": 1916.9,
+      "mean_frp": 38.338
+    },
+    {
+      "date": "2008-11-14",
+      "detections": 30,
+      "total_frp": 600.8,
+      "mean_frp": 20.026666666666664
+    },
+    {
+      "date": "2008-11-15",
+      "detections": 3,
+      "total_frp": 87.6,
+      "mean_frp": 29.2
+    },
+    {
+      "date": "2008-11-16",
+      "detections": 65,
+      "total_frp": 2616.4,
+      "mean_frp": 40.252307692307696
+    },
+    {
+      "date": "2008-11-17",
+      "detections": 5,
+      "total_frp": 230.8,
+      "mean_frp": 46.160000000000004
+    },
+    {
+      "date": "2008-11-18",
+      "detections": 5,
+      "total_frp": 138.5,
+      "mean_frp": 27.7
+    },
+    {
+      "date": "2008-11-19",
+      "detections": 8,
+      "total_frp": 314.1,
+      "mean_frp": 39.2625
+    },
+    {
+      "date": "2008-11-20",
+      "detections": 3,
+      "total_frp": 50.6,
+      "mean_frp": 16.866666666666667
+    },
+    {
+      "date": "2008-11-21",
+      "detections": 2,
+      "total_frp": 50.6,
+      "mean_frp": 25.3
+    },
+    {
+      "date": "2008-11-22",
+      "detections": 5,
+      "total_frp": 72.6,
+      "mean_frp": 14.52
+    },
+    {
+      "date": "2008-11-23",
+      "detections": 44,
+      "total_frp": 1083.9,
+      "mean_frp": 24.63409090909091
+    },
+    {
+      "date": "2008-11-24",
+      "detections": 10,
+      "total_frp": 1203.5,
+      "mean_frp": 120.35
+    },
+    {
+      "date": "2008-11-25",
+      "detections": 52,
+      "total_frp": 1120.7,
+      "mean_frp": 21.551923076923078
+    },
+    {
+      "date": "2008-11-26",
+      "detections": 25,
+      "total_frp": 1445.6,
+      "mean_frp": 57.824
+    },
+    {
+      "date": "2008-11-27",
+      "detections": 39,
+      "total_frp": 1102.3,
+      "mean_frp": 28.26410256410256
+    },
+    {
+      "date": "2008-11-28",
+      "detections": 27,
+      "total_frp": 710.1,
+      "mean_frp": 26.3
+    },
+    {
+      "date": "2008-11-29",
+      "detections": 38,
+      "total_frp": 7536.9,
+      "mean_frp": 198.3394736842105
+    },
+    {
+      "date": "2008-11-30",
+      "detections": 58,
+      "total_frp": 1876.7,
+      "mean_frp": 32.35689655172414
+    },
+    {
+      "date": "2008-12-02",
+      "detections": 41,
+      "total_frp": 883.8,
+      "mean_frp": 21.55609756097561
+    },
+    {
+      "date": "2008-12-03",
+      "detections": 2,
+      "total_frp": 161.5,
+      "mean_frp": 80.75
+    },
+    {
+      "date": "2008-12-04",
+      "detections": 1,
+      "total_frp": 12.4,
+      "mean_frp": 12.4
+    },
+    {
+      "date": "2008-12-07",
+      "detections": 1,
+      "total_frp": 23.1,
+      "mean_frp": 23.1
+    },
+    {
+      "date": "2008-12-09",
+      "detections": 6,
+      "total_frp": 183.0,
+      "mean_frp": 30.5
+    },
+    {
+      "date": "2008-12-10",
+      "detections": 2,
+      "total_frp": 112.2,
+      "mean_frp": 56.1
+    },
+    {
+      "date": "2008-12-11",
+      "detections": 28,
+      "total_frp": 545.9,
+      "mean_frp": 19.49642857142857
+    },
+    {
+      "date": "2008-12-12",
+      "detections": 2,
+      "total_frp": 91.7,
+      "mean_frp": 45.85
+    },
+    {
+      "date": "2008-12-13",
+      "detections": 12,
+      "total_frp": 361.3,
+      "mean_frp": 30.108333333333334
+    },
+    {
+      "date": "2008-12-14",
+      "detections": 13,
+      "total_frp": 457.3,
+      "mean_frp": 35.176923076923075
+    },
+    {
+      "date": "2008-12-15",
+      "detections": 13,
+      "total_frp": 946.9,
+      "mean_frp": 72.83846153846153
+    },
+    {
+      "date": "2008-12-16",
+      "detections": 22,
+      "total_frp": 525.4,
+      "mean_frp": 23.88181818181818
+    },
+    {
+      "date": "2008-12-17",
+      "detections": 2,
+      "total_frp": 25.2,
+      "mean_frp": 12.6
+    },
+    {
+      "date": "2008-12-18",
+      "detections": 10,
+      "total_frp": 139.4,
+      "mean_frp": 13.940000000000001
+    },
+    {
+      "date": "2008-12-19",
+      "detections": 2,
+      "total_frp": 95.9,
+      "mean_frp": 47.95
+    },
+    {
+      "date": "2008-12-20",
+      "detections": 42,
+      "total_frp": 824.7,
+      "mean_frp": 19.635714285714286
+    },
+    {
+      "date": "2008-12-21",
+      "detections": 8,
+      "total_frp": 307.59999999999997,
+      "mean_frp": 38.449999999999996
+    },
+    {
+      "date": "2008-12-22",
+      "detections": 1,
+      "total_frp": 48.0,
+      "mean_frp": 48.0
+    },
+    {
+      "date": "2008-12-23",
+      "detections": 7,
+      "total_frp": 226.6,
+      "mean_frp": 32.371428571428574
+    },
+    {
+      "date": "2008-12-24",
+      "detections": 2,
+      "total_frp": 58.3,
+      "mean_frp": 29.15
+    },
+    {
+      "date": "2008-12-25",
+      "detections": 6,
+      "total_frp": 171.29999999999998,
+      "mean_frp": 28.549999999999997
+    },
+    {
+      "date": "2008-12-26",
+      "detections": 2,
+      "total_frp": 79.2,
+      "mean_frp": 39.6
+    },
+    {
+      "date": "2008-12-27",
+      "detections": 14,
+      "total_frp": 173.6,
+      "mean_frp": 12.4
+    },
+    {
+      "date": "2008-12-28",
+      "detections": 3,
+      "total_frp": 52.900000000000006,
+      "mean_frp": 17.633333333333336
+    },
+    {
+      "date": "2008-12-29",
+      "detections": 32,
+      "total_frp": 1030.5,
+      "mean_frp": 32.203125
+    },
+    {
+      "date": "2008-12-30",
+      "detections": 2,
+      "total_frp": 95.1,
+      "mean_frp": 47.55
+    },
+    {
+      "date": "2008-12-31",
+      "detections": 3,
+      "total_frp": 95.3,
+      "mean_frp": 31.766666666666666
     }
   ],
   "classes": [
@@ -552,39 +2100,28 @@
       "code": 0,
       "key": "vegetation",
       "label": "Presumed vegetation fire",
-      "rows": 286722
+      "rows": 311429
     },
     {
       "code": 2,
       "key": "static",
       "label": "Static thermal source",
-      "rows": 28912
-    },
-    {
-      "code": 3,
-      "key": "offshore",
-      "label": "Offshore thermal source",
-      "rows": 401
+      "rows": 5039
     }
   ],
   "provenance": {
-    "name": "India VIIRS S-NPP historical observations, 2025",
-    "primary_source": "NASA FIRMS / VIIRS S-NPP standard processing",
-    "primary_url": "https://firms.modaps.eosdis.nasa.gov/data/country/viirs-snpp/2025/viirs-snpp_2025_India.csv",
-    "download_url": "https://api.github.com/repos/UjjwalKumar7209/sih-2026/contents/SIH_Industrial_Fire_AI/firms_historical_india.csv?ref=30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
-    "mirror_url": "https://github.com/UjjwalKumar7209/sih-2026/blob/30ae6eb05c400b1d40aac7daa4c4a9bbceec667f/SIH_Industrial_Fire_AI/firms_historical_india.csv",
-    "mirror_commit": "30ae6eb05c400b1d40aac7daa4c4a9bbceec667f",
-    "mirror_committed_at": "2026-08-28T14:38:24Z",
-    "sha256": "62b397c086bf1934010fd86987506e8aca45d74a9fc0270cd434128a9a9a3db6",
-    "bytes": 24547074,
-    "retrieved_at": "2026-09-05T11:44:06.994835+00:00",
+    "name": "modis_2008_Angola.csv",
+    "primary_source": "User-provided FIRMS archive",
+    "primary_url": "https://firms.modaps.eosdis.nasa.gov/download/",
+    "download_url": "https://firms.modaps.eosdis.nasa.gov/download/",
+    "sha256": "591d54eafbb4299f2d3b7901ed78dde3a3f337be75577290cb55bec60a25f2e3",
+    "bytes": 24656703,
+    "retrieved_at": "2026-09-05T19:13:53.850Z",
     "notes": [
-      "Downloaded from a pinned public mirror of a NASA-format FIRMS archive; direct NASA access is unavailable in this sandbox.",
-      "Mirror provenance is disclosed; bit-for-bit equivalence to the primary NASA country archive has not been verified.",
-      "NASA type is an algorithmic source-type label, not a verified incident report. Collection-2 type-field reprocessing status of the mirror is unverified."
+      "User-supplied file. Schema and SHA-256 checked; authenticity, label provenance and NASA reprocessing status must be independently verified."
     ]
   },
-  "date_start": "2025-01-01T06:01:00+00:00",
-  "date_end": "2025-03-31T20:44:00+00:00",
-  "rows": 316035
+  "date_start": "2008-01-01T12:38:00+00:00",
+  "date_end": "2008-12-31T21:34:00+00:00",
+  "rows": 316468
 }

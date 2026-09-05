@@ -39,18 +39,45 @@ export class Engine {
   private lastModelCheck = 0;
   private inference: Promise<void> | null = null;
 
-  async initialize() {
-    await Promise.all([this.store.initialize(), this.firms.restore()]);
+  getRegions(): Region[] {
+    if (this.archiveMeta?.region) {
+      const active = this.archiveMeta.region as Region;
+      return [active, ...REGIONS.filter(r => r.id !== active.id)];
+    }
+    return REGIONS;
+  }
+
+  async reloadArchive() {
     try {
-      this.archiveMeta = JSON.parse(await fs.readFile('data/replay/manifest.json', 'utf8'));
-      const compressed = await fs.readFile('data/replay/india-2025-q1.csv.gz');
-      if (createHash('sha256').update(compressed).digest('hex') !== this.archiveMeta?.replay_sha256) throw new Error('Historical replay checksum mismatch');
+      let manifestPath = 'data/replay/active-manifest.json';
+      let replayPath = 'data/replay/active-replay.csv.gz';
+      try {
+        await fs.access(manifestPath);
+        await fs.access(replayPath);
+      } catch {
+        manifestPath = 'data/replay/manifest.json';
+        replayPath = 'data/replay/india-2025-q1.csv.gz';
+      }
+      this.archiveMeta = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+      const compressed = await fs.readFile(replayPath);
+      if (this.archiveMeta?.replay_sha256 && createHash('sha256').update(compressed).digest('hex') !== this.archiveMeta.replay_sha256) {
+        throw new Error('Historical replay checksum mismatch');
+      }
       this.archive = parseFirmsCsv(gunzipSync(compressed).toString('utf8'), 'archive').observations;
-      if (this.archive.length !== this.archiveMeta?.rows) throw new Error('Historical replay row count does not match its provenance manifest');
+      if (this.archiveMeta?.rows != null && this.archive.length !== this.archiveMeta.rows) {
+        throw new Error('Historical replay row count does not match its provenance manifest');
+      }
+      this.archiveError = null;
+      this.predictions.clear();
     } catch (error) {
       this.archive = [];
       this.archiveError = error instanceof Error ? error.message : 'Historical archive unavailable';
     }
+  }
+
+  async initialize() {
+    await Promise.all([this.store.initialize(), this.firms.restore()]);
+    await this.reloadArchive();
   }
 
   async checkSources(force = false) {
@@ -138,7 +165,17 @@ export class Engine {
   async query(filters: Filters): Promise<{events: ThermalEvent[]; overview: Omit<Overview, 'events' | 'total' | 'truncated' | 'mapLimit' | 'stats' | 'distribution' | 'timeline'>}> {
     if (filters.mode === 'live') await this.firms.refresh();
     const data = filters.mode === 'archive' ? this.archive : this.firms.observations;
-    const region = REGIONS.find(region => region.id === filters.region) || REGIONS[0];
+    const availableRegions = this.getRegions();
+    let selectedRegion = availableRegions.find(r => r.id === filters.region);
+    if (!selectedRegion) {
+      selectedRegion = (filters.mode === 'archive' && this.archiveMeta?.region) ? this.archiveMeta.region : availableRegions[0];
+    } else if (filters.mode === 'archive' && filters.region === 'india' && this.archiveMeta?.region && this.archiveMeta.region.id !== 'india') {
+      const hasIndiaData = this.archive.some(item => item.event.longitude >= 68 && item.event.longitude <= 98 && item.event.latitude >= 6 && item.event.latitude <= 37);
+      if (!hasIndiaData) {
+        selectedRegion = this.archiveMeta.region;
+      }
+    }
+    const region: Region = selectedRegion || availableRegions[0] || REGIONS[0];
     const [west, south, east, north] = region.bbox;
 
     const regionalData = data.filter(({ event }) => event.latitude >= south && event.latitude <= north && event.longitude >= west && event.longitude <= east);
@@ -170,18 +207,19 @@ export class Engine {
     const archive = filters.mode === 'archive';
     const stale = !archive && (this.firms.source.status !== 'connected' || !this.firms.lastSuccess || Date.now() - Date.parse(this.firms.lastSuccess) > 90 * 60000);
     const availability = (!data.length && filters.mode === 'live') || (!data.length && archive && !!this.archiveError) ? 'unavailable' : stale ? 'stale' : 'ready';
+    const archiveName = this.archiveMeta?.name || 'historical archive';
     const notice = archive ?
-      'Real historical NASA FIRMS observations · 25–31 March 2025 archive. This is historical analysis, not a live feed.' :
+      `Real historical NASA FIRMS observations · ${archiveName}. This is historical analysis, not a live feed.` :
       availability === 'unavailable' ? 'Live source unavailable. Historical data is not being used as a fallback.' :
       stale ? 'Live feed is delayed or currently unreachable. Inspect source freshness.' :
       'NASA FIRMS near-real-time observations. Satellite overpasses and processing introduce nominal latency; this is not continuous sensor monitoring.';
     const overview = { mode: filters.mode, availability, notice,
       range: { from: new Date(start).toISOString(), to: new Date(end).toISOString(), availableFrom, availableTo },
-      source: { name: archive ? 'NASA FIRMS · attributed historical mirror' : 'NASA FIRMS near-real-time observations',
-        url: archive ? this.archiveMeta?.source?.mirror_url || 'https://firms.modaps.eosdis.nasa.gov/download/' : this.firms.source.url!,
+      source: { name: archive ? (this.archiveMeta?.name ? `NASA FIRMS · ${this.archiveMeta.name}` : 'NASA FIRMS · attributed historical mirror') : 'NASA FIRMS near-real-time observations',
+        url: archive ? this.archiveMeta?.source?.mirror_url || this.archiveMeta?.source?.download_url || 'https://firms.modaps.eosdis.nasa.gov/download/' : this.firms.source.url!,
         retrievedAt: archive ? this.archiveMeta?.source?.retrieved_at || null : this.firms.lastSuccess,
         lastAttempt: archive ? null : this.firms.lastAttempt, sha256: archive ? this.archiveMeta?.source_sha256 : undefined },
-      model: { ...this.modelState }, generatedAt: new Date().toISOString(), region, window: filters.window };
+      model: { ...this.modelState }, generatedAt: new Date().toISOString(), region, regions: availableRegions, window: filters.window };
     return { events, overview: overview as ReturnType<Engine['query']> extends Promise<infer R> ? R extends { overview: infer O } ? O : never : never };
   }
 

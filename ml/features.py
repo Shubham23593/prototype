@@ -32,50 +32,145 @@ SIH_CLASSES = {
     "persistent": "Persistent Thermal Source",
     "uncertain": "Other / Uncertain",
 }
-CLASS_NAMES = {0: "Presumed vegetation fire", 2: "Static thermal source", 3: "Offshore thermal source"}
-CLASS_KEYS = {0: "vegetation", 2: "static", 3: "offshore"}
+CLASS_NAMES = {0: "Presumed vegetation fire", 1: "Active volcano", 2: "Static thermal source", 3: "Offshore thermal source"}
+CLASS_KEYS = {0: "vegetation", 1: "volcano", 2: "static", 3: "offshore"}
+
+ALIAS_MAP: dict[str, list[str]] = {
+    "latitude": ["latitude", "lat", "y"],
+    "longitude": ["longitude", "long", "lon", "x"],
+    "bright_ti4": [
+        "bright_ti4", "brightness_ti4", "brightness", "bright_t4",
+        "temp_i4", "brightness_i4", "bright_ti4_k", "bt_i4",
+        "ch4", "t4", "temp4", "brightness_21", "bright_t21"
+    ],
+    "bright_ti5": [
+        "bright_ti5", "brightness_ti5", "bright_t31", "bright_t5",
+        "temp_i5", "brightness_i5", "bright_ti5_k", "bt_i5",
+        "ch5", "ch31", "t31", "bright_31", "temp31", "bt31"
+    ],
+    "frp": ["frp", "fire_radiative_power", "power", "frp_mw", "radiative_power"],
+    "confidence": ["confidence", "conf", "nasa_confidence", "detection_confidence"],
+    "acq_date": ["acq_date", "acqdate", "date", "acquired_date", "acquisition_date"],
+    "acq_time": ["acq_time", "acqtime", "time", "acquired_time", "acquisition_time"],
+    "daynight": ["daynight", "day_night", "dn", "day_or_night"],
+    "scan": ["scan"],
+    "track": ["track"],
+    "satellite": ["satellite", "sat", "sensor_satellite"],
+    "instrument": ["instrument", "sensor"],
+    "type": ["type", "fire_type", "type_label"],
+}
+
+REQUIRED_COLUMNS = ["latitude", "longitude", "acq_date", "acq_time", "bright_ti4", "bright_ti5", "frp", "confidence"]
 
 
 def normalize(frame: pd.DataFrame, require_labels: bool = False) -> tuple[pd.DataFrame, dict[str, Any]]:
     df = frame.copy()
+    # Normalize column names: trim and lowercase
     df.columns = [str(c).strip().lower() for c in df.columns]
-    # FIRMS's web archive sometimes uses MODIS-style column names for VIIRS data.
-    for old, new in [("brightness", "bright_ti4"), ("bright_t31", "bright_ti5")]:
-        if new not in df.columns and old in df.columns:
-            df = df.rename(columns={old: new})
-    required = ["latitude", "longitude", "bright_ti4", "bright_ti5", "frp", "scan", "track", "acq_date", "acq_time", "daynight", "confidence"]
-    if require_labels:
-        required += ["type"]
-    missing = [c for c in required if c not in df.columns]
+
+    # Map column aliases dynamically
+    renames: dict[str, str] = {}
+    for canonical, aliases in ALIAS_MAP.items():
+        if canonical not in df.columns:
+            for alias in aliases:
+                if alias in df.columns:
+                    renames[alias] = canonical
+                    break
+    if renames:
+        df = df.rename(columns=renames)
+
+    # If bright_ti5 is missing but bright_ti4 is present, synthesize bright_ti5 from bright_ti4
+    if "bright_ti5" not in df.columns and "bright_ti4" in df.columns:
+        df["bright_ti5"] = df["bright_ti4"]
+
+    # Validate 8 required columns strictly
+    missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
-        raise ValueError(f"Missing FIRMS columns: {', '.join(missing)}. Import a VIIRS CSV, not MODIS data.")
+        raise ValueError(f"Missing required FIRMS column(s): {', '.join(missing)}. Required columns: latitude, longitude, acq_date, acq_time, bright_ti4, bright_ti5, frp, confidence.")
+
+    if require_labels and "type" not in df.columns:
+        raise ValueError("Missing FIRMS type column for labelled training.")
+
     original = len(df)
+
+    # Optional column resilience: scan, track, daynight, satellite
+    if "scan" not in df.columns:
+        df["scan"] = 1.0
+    else:
+        df["scan"] = pd.to_numeric(df["scan"], errors="coerce").fillna(1.0).clip(lower=0.1, upper=10.0)
+
+    if "track" not in df.columns:
+        df["track"] = 1.0
+    else:
+        df["track"] = pd.to_numeric(df["track"], errors="coerce").fillna(1.0).clip(lower=0.1, upper=10.0)
+
+    if "daynight" not in df.columns:
+        df["daynight"] = "D"
+    else:
+        df["daynight"] = df["daynight"].astype(str).str.strip().str.upper()
+        df["daynight"] = df["daynight"].map(lambda x: "D" if x in ["D", "DAY", "1"] else ("N" if x in ["N", "NIGHT", "0"] else "D"))
+
+    if "satellite" not in df.columns:
+        df["satellite"] = "unknown"
+    else:
+        df["satellite"] = df["satellite"].fillna("unknown").astype(str)
+
+    if "confidence" in df.columns:
+        df["confidence"] = df["confidence"].fillna("nominal")
+
+    # Numeric conversions for physical columns
     for c in ["latitude", "longitude", "bright_ti4", "bright_ti5", "frp", "scan", "track"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-    # acq_time is HHMM, not a decimal hour; leading zeroes are significant.
-    times = df["acq_time"].astype(str).str.replace(r"\.0$", "", regex=True).str.zfill(4)
+
+    # Convert Celsius to Kelvin if temperatures appear to be in Celsius
+    if df["bright_ti4"].notna().any() and df["bright_ti4"].dropna().mean() < 150:
+        df["bright_ti4"] = df["bright_ti4"] + 273.15
+    if df["bright_ti5"].notna().any() and df["bright_ti5"].dropna().mean() < 150:
+        df["bright_ti5"] = df["bright_ti5"] + 273.15
+
+    # acq_time is HHMM, not a decimal hour; handle colons, floats and strings
+    times = (
+        df["acq_time"]
+        .astype(str)
+        .str.replace(r"\.0$", "", regex=True)
+        .str.replace(":", "", regex=False)
+        .str.strip()
+        .str.zfill(4)
+    )
     valid_times = times.str.fullmatch(r"[0-2][0-9][0-5][0-9]") & (pd.to_numeric(times.str[:2], errors="coerce") < 24)
     df["acq_time"] = times
-    df["acquired_at"] = pd.to_datetime(df["acq_date"].astype(str) + " " + times, format="%Y-%m-%d %H%M", utc=True, errors="coerce")
-    df["daynight"] = df["daynight"].astype(str).str.upper()
+
+    # Date parsing: %Y-%m-%d %H%M with flexible fallback for slashes/other formats
+    dates_str = df["acq_date"].astype(str).str.strip().str.replace("/", "-", regex=False)
+    acquired = pd.to_datetime(dates_str + " " + times, format="%Y-%m-%d %H%M", utc=True, errors="coerce")
+    if acquired.isna().any():
+        fallback = pd.to_datetime(dates_str, utc=True, errors="coerce")
+        hrs = pd.to_numeric(times.str[:2], errors="coerce").fillna(0)
+        mins = pd.to_numeric(times.str[2:4], errors="coerce").fillna(0)
+        fallback = fallback + pd.to_timedelta(hrs, unit="h") + pd.to_timedelta(mins, unit="m")
+        acquired = acquired.combine_first(fallback)
+    df["acquired_at"] = acquired
+
     valid = (valid_times & df["acquired_at"].notna() & df["latitude"].between(-90, 90)
              & df["longitude"].between(-180, 180) & df["bright_ti4"].between(150, 600)
              & df["bright_ti5"].between(150, 600) & df["frp"].between(0, 100000)
-             & df["scan"].between(0.1, 2) & df["track"].between(0.1, 2)
-             & df["daynight"].isin(["D", "N"]))
-    if "instrument" in df.columns:
-        valid &= df["instrument"].astype(str).str.upper().eq("VIIRS")
-    if require_labels:
+             & df["scan"].between(0.01, 10) & df["track"].between(0.01, 10)
+             & df["daynight"].isin(["D", "N"]) & df["confidence"].notna())
+
+    if "type" in df.columns:
         df["type"] = pd.to_numeric(df["type"], errors="coerce")
-        valid &= df["type"].isin(CLASS_NAMES)
-    if "satellite" not in df:
-        df["satellite"] = "unknown"
+        if require_labels:
+            valid &= df["type"].isin(CLASS_NAMES)
+        else:
+            valid &= df["type"].isna() | df["type"].isin(CLASS_NAMES)
+
     df = df[valid].copy()
     invalid = original - len(df)
-    df = df.drop_duplicates(["latitude", "longitude", "acquired_at", "satellite"])
-    duplicates = original - invalid - len(df)
+    before_dedup = len(df)
+    df = df.drop_duplicates()
+    duplicates = before_dedup - len(df)
     df = df.sort_values("acquired_at", kind="stable").reset_index(drop=True)
-    if require_labels:
+    if require_labels and "type" in df.columns:
         df["type"] = df["type"].astype(int)
     return df, {"input_rows": original, "valid_rows": len(df), "invalid_or_unsupported_rows": invalid, "duplicates_removed": duplicates}
 
@@ -123,8 +218,17 @@ def feature_matrix(frame: pd.DataFrame, features: list[str] | None = None) -> pd
     df["log_frp"] = np.log1p(df["frp"].clip(lower=0))
     df["frp_density"] = df["frp"] / (df["scan"] * df["track"]).clip(lower=0.01)
     df["is_day"] = (df["daynight"] == "D").astype(float)
-    # VIIRS confidence categories, not calibrated probabilities.
-    df["confidence_score"] = df["confidence"].astype(str).str.lower().map({"l": 0, "low": 0, "n": 1, "nominal": 1, "h": 2, "high": 2})
+    # Confidence score: categorical ('l', 'n', 'h'), numeric percentage (0-100), or integer scale (0-2)
+    conf_raw = df["confidence"].astype(str).str.strip().str.lower()
+    cat_map = {"l": 0.0, "low": 0.0, "n": 1.0, "nominal": 1.0, "h": 2.0, "high": 2.0}
+    conf_scores = conf_raw.map(cat_map)
+    num_conf = pd.to_numeric(df["confidence"], errors="coerce")
+    num_scores = pd.Series(np.nan, index=df.index, dtype=float)
+    valid_num = num_conf.notna()
+    if valid_num.any():
+        v = num_conf[valid_num]
+        num_scores[valid_num] = np.where(v <= 2, v, np.where(v < 30, 0.0, np.where(v <= 80, 1.0, 2.0)))
+    df["confidence_score"] = conf_scores.combine_first(num_scores).fillna(1.0).astype(float)
     df["hour_sin"] = np.sin(2 * math.pi * hours / 24)
     df["hour_cos"] = np.cos(2 * math.pi * hours / 24)
     df["season_sin"] = np.sin(2 * math.pi * dt.dt.dayofyear / 365.25)

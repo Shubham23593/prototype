@@ -50,11 +50,17 @@ export default function Dashboard(){
   const forceRefresh=useCallback(()=>setRefresh(value=>value+1),[]);
   const health=useApi<{sources:SourceStatus[];defaultMode:DataMode;archiveAvailable:boolean}>('/api/health',refresh,60000);
   useEffect(()=>{if(health.data&&!initialModeApplied.current){initialModeApplied.current=true;if(!userChoseMode.current)setMode(health.data.defaultMode);}},[health.data]);
-  const region=REGIONS.find(item=>item.id===regionId)||REGIONS[0];
   const query=new URLSearchParams({mode,region:regionId,window:windowSize,classKey,...(dates||{})}).toString();
   const spatialPage=page==='overview'||page==='observations';
   const overview=useApi<OverviewData>(spatialPage?`/api/overview?${query}`:null,refresh,mode==='live'&&spatialPage?60000:0);
   const data=overview.data;
+  const availableRegions = data?.regions || REGIONS;
+  const region = availableRegions.find(item=>item.id===regionId) || data?.region || availableRegions[0];
+  useEffect(() => {
+    if (data?.region && mode === 'archive' && regionId === 'india' && data.region.id !== 'india') {
+      setRegionId(data.region.id);
+    }
+  }, [data?.region, mode, regionId]);
   const nasa=health.data?.sources.find(source=>source.id==='firms');
   const liveConnected=nasa?.status==='connected';
   const onEvidence=useCallback((value:Evidence)=>{setEvidence(value);if(value.prediction)setSelected(current=>current?{...current,prediction:value.prediction!}:current);},[]);
@@ -62,7 +68,14 @@ export default function Dashboard(){
   const navigate=useCallback((next:Page)=>{setPage(next);setSelected(null);setEvidence(null);setMobileNav(false);setFullScreen(false);window.history.pushState(null,'',`#${next}`);window.scrollTo({top:0,behavior:'instant'});},[]);
   useEffect(()=>{
     const sync=()=>{const value=window.location.hash.slice(1) as Page;if(Object.hasOwn(PAGES,value))setPage(value);else setPage('overview');};sync();window.addEventListener('hashchange',sync);window.addEventListener('popstate',sync);
-    try{const saved=window.localStorage.getItem('thermoscan-imported-dataset');if(saved)setImported(JSON.parse(saved));}catch{/* Local browser storage is optional. */}
+    try{
+      const saved=window.localStorage.getItem('thermoscan-imported-dataset');
+      if(saved){
+        const parsed=JSON.parse(saved);
+        if(parsed&&Number(parsed.rows)>0)setImported(parsed);
+        else window.localStorage.removeItem('thermoscan-imported-dataset');
+      }
+    }catch{/* Local browser storage is optional. */}
     return()=>{window.removeEventListener('hashchange',sync);window.removeEventListener('popstate',sync);};
   },[]);
   useEffect(()=>{if(!fullScreen)return;const key=(event:KeyboardEvent)=>{if(event.key==='Escape')setFullScreen(false);};document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key);},[fullScreen]);
@@ -91,7 +104,8 @@ export default function Dashboard(){
   }
   function openDates(){setDateFrom(dates?.from||data?.range.from?.slice(0,10)||'');setDateTo(dates?.to||data?.range.to?.slice(0,10)||'');setDateError(null);setDateModal(true);}
   function applyDates(){if(!dateFrom||!dateTo||dateFrom>dateTo){setDateError('Choose valid start and end dates, in that order.');return;}if(Date.parse(dateTo)-Date.parse(dateFrom)>6*86400000){setDateError('The available map archive spans seven calendar days. Select a range within that window.');return;}if(data?.range.availableFrom&&dateFrom<data.range.availableFrom.slice(0,10)||data?.range.availableTo&&dateTo>data.range.availableTo.slice(0,10)){setDateError('Select dates inside the source’s available observation window.');return;}setDates({from:dateFrom,to:dateTo});setDateModal(false);}
-  const saveImported=useCallback((value:ImportedDataset)=>{setImported(value);try{localStorage.setItem('thermoscan-imported-dataset',JSON.stringify(value));}catch{/* CSV itself remains server-side. */}},[]);
+  const saveImported=useCallback((value:ImportedDataset)=>{if(value&&Number(value.rows)>0){setImported(value);try{localStorage.setItem('thermoscan-imported-dataset',JSON.stringify(value));}catch{/* CSV itself remains server-side. */}}},[]);
+
   const rangeLabel=dates?`${formatDate(dates.from,{year:undefined})} — ${formatDate(dates.to)}`:data?.range.availableTo&&mode==='archive'?`${formatDate(data.range.from,{year:undefined})} — ${formatDate(data.range.to)}`:`Last ${windowSize==='7d'?'7 days':windowSize==='48h'?'48 hours':'24 hours'}`;
 
   return <div className="min-h-screen">
@@ -121,7 +135,7 @@ export default function Dashboard(){
 
         {spatialPage&&<>
           <div className="mt-6 flex flex-wrap items-center gap-2.5">
-            <label className="relative"><MapPin size={13} className="pointer-events-none absolute left-3 top-3 text-[#9baab5]"/><select aria-label="Monitoring region" className="h-[37px] appearance-none rounded-lg border border-[#e3e8ec] bg-white py-2 pl-8 pr-8 text-[10px] font-medium text-[#7f919e]" value={regionId} onChange={event=>{setRegionId(event.target.value);setSelected(null);}}>{REGIONS.map(region=><option key={region.id} value={region.id}>{region.name}</option>)}</select><ChevronDown size={10} className="pointer-events-none absolute right-3 top-3.5 text-[#a9b5be]"/></label>
+            <label className="relative"><MapPin size={13} className="pointer-events-none absolute left-3 top-3 text-[#9baab5]"/><select aria-label="Monitoring region" className="h-[37px] appearance-none rounded-lg border border-[#e3e8ec] bg-white py-2 pl-8 pr-8 text-[10px] font-medium text-[#7f919e]" value={region.id} onChange={event=>{setRegionId(event.target.value);setSelected(null);}}>{availableRegions.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select><ChevronDown size={10} className="pointer-events-none absolute right-3 top-3.5 text-[#a9b5be]"/></label>
             <button className="btn-secondary !h-[37px] !min-h-0 !px-3 !text-[10px]" onClick={openDates}><CalendarDays size={12} className="text-[#9cabb5]"/>{rangeLabel}<ChevronDown size={10} className="text-[#a9b5be]"/></button>
             <label className="relative"><ListFilter size={13} className="pointer-events-none absolute left-3 top-3 text-[#9baab5]"/><select aria-label="Filter source type" className="h-[37px] appearance-none rounded-lg border border-[#e3e8ec] bg-white py-2 pl-8 pr-8 text-[10px] font-medium text-[#7f919e]" value={classKey} onChange={event=>setClassKey(event.target.value as ClassKey|'all')}><option value="all">All source types</option>{Object.entries(CLASSES).map(([key,value])=><option key={key} value={key}>{value.short}</option>)}</select><ChevronDown size={10} className="pointer-events-none absolute right-3 top-3.5 text-[#a9b5be]"/></label>
             <div className="ml-auto flex h-[37px] items-center rounded-lg border border-[#e2e8ec] bg-[#eef2f5] p-[3px] text-[10px]"><button onClick={()=>setDataMode('archive')} className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 ${mode==='archive'?'bg-white font-medium text-[#9c7e64] shadow-sm':'text-[#9fadb7]'}`}><History size={11}/>Historical</button><button onClick={()=>setDataMode('live')} className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 ${mode==='live'?'bg-white font-medium text-[#759584] shadow-sm':'text-[#9fadb7]'}`}><Radio size={11}/>Near-real-time</button></div>
@@ -131,7 +145,7 @@ export default function Dashboard(){
               {mode==='archive'?<History size={12}/>:<Radio size={12}/>}
               <span>
                 {mode==='archive' ? (
-                  <>Genuine historical observations <span className="mx-1.5 opacity-40">/</span> March 2025 archive <span className="hidden xl:inline">· not a live feed</span></>
+                  <>Genuine historical observations <span className="mx-1.5 opacity-40">/</span> {data?.source?.name || 'Historical archive'} <span className="hidden xl:inline">· not a live feed</span></>
                 ) : data?.availability==='ready' ? (
                   <>
                     <span className="font-semibold">NASA FIRMS near-real-time observations</span>
@@ -149,11 +163,11 @@ export default function Dashboard(){
           {overview.error&&<div className="mb-4"><ErrorState message={overview.error} retry={overview.reload}/></div>}
         </>}
         <div className={spatialPage?'':'mt-6'}>
-          {page==='overview'&&<OverviewView data={data} loading={overview.loading} region={region} selected={selected} onSelect={onSelect} onPage={navigate} onSources={()=>navigate('sources')} fullScreen={fullScreen} onFullScreen={()=>setFullScreen(value=>!value)} evidence={evidence}/>}
+          {page==='overview'&&<OverviewView data={data} loading={overview.loading} region={data?.region || region} selected={selected} onSelect={onSelect} onPage={navigate} onSources={()=>navigate('sources')} fullScreen={fullScreen} onFullScreen={()=>setFullScreen(value=>!value)} evidence={evidence}/>}
           {page==='observations'&&<ObservationsView query={query} refresh={refresh} onSelect={onSelect}/>}
           {page==='watchlist'&&<WatchlistView refresh={refresh} onSelect={onSelect} notify={notify}/>}
           {page==='history'&&<HistoryView onPage={navigate} onImported={saveImported} imported={imported} notify={notify} refresh={refresh}/>}
-          {page==='model'&&<ModelView refresh={refresh} imported={imported} onPage={navigate} onModelChanged={forceRefresh} notify={notify}/>}
+          {page==='model'&&<ModelView refresh={refresh} imported={imported} onPage={navigate} onModelChanged={()=>{setDates(null);if(mode!=='archive')setMode('archive');forceRefresh();}} notify={notify}/>}
           {page==='sources'&&<SourcesView refresh={refresh} onChecked={forceRefresh} onPage={navigate} notify={notify}/>}
         </div>
       </main>

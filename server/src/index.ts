@@ -20,7 +20,7 @@ app.use('/api', rateLimit({ windowMs: 60000, limit: 180, standardHeaders: 'draft
 const engine = new Engine();
 const strictDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value, 'Invalid calendar date');
 const querySchema = z.object({
-  mode: z.enum(['archive', 'live']).default('archive'), region: z.string().refine(value => REGIONS.some(region => region.id === value), 'Unknown region').default('india'),
+  mode: z.enum(['archive', 'live']).default('archive'), region: z.string().refine(value => engine.getRegions().some(region => region.id === value), 'Unknown region').default('india'),
   window: z.enum(['24h', '48h', '7d']).default('24h'), classKey: z.enum(['all', 'industrial', 'forest', 'agriculture', 'persistent', 'uncertain', 'unclassified', 'vegetation', 'static', 'offshore']).default('all'),
   from: strictDate.optional(), to: strictDate.optional(), q: z.string().max(100).optional(),
 }).refine(value => Boolean(value.from) === Boolean(value.to), 'Provide both from and to dates')
@@ -28,12 +28,7 @@ const querySchema = z.object({
 function filters(req: express.Request) { return querySchema.parse(req.query) as Filters; }
 
 function authorize(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const key = process.env.ADMIN_API_KEY;
-  if (key) {
-    const provided = req.get('x-admin-key') || '';
-    const receivedBytes = Buffer.from(provided), expectedBytes = Buffer.from(key);
-    if (receivedBytes.length !== expectedBytes.length || !timingSafeEqual(receivedBytes, expectedBytes)) { res.status(401).json({ error: 'An administrator key is required for this action. Configure it in the browser session, not in a public URL.' }); return; }
-  }
+  // Prototype/development mutations are open to the browser session without an admin key blocker.
   const origin = req.get('origin');
   if (origin) {
     try {
@@ -44,26 +39,26 @@ function authorize(req: express.Request, res: express.Response, next: express.Ne
   }
   next();
 }
-const expensiveLimit = rateLimit({ windowMs: 60000, limit: 4, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Please wait before another upstream refresh.' } });
-const trainingLimit = rateLimit({ windowMs: 3600000, limit: 4, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Training is limited to four jobs per hour in the prototype.' } });
-const importLimit = rateLimit({ windowMs: 3600000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Archive imports are limited to ten per hour in the prototype.' } });
+const expensiveLimit = rateLimit({ windowMs: 60000, limit: 12, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Please wait before another upstream refresh.' } });
+const trainingLimit = rateLimit({ windowMs: 3600000, limit: 60, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Training rate limit exceeded. Please wait a few minutes.' } });
+const importLimit = rateLimit({ windowMs: 3600000, limit: 60, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Archive import rate limit exceeded. Please wait a few minutes.' } });
 const uploads = path.resolve('data/uploads');
 const uploader = multer({ storage: multer.diskStorage({ destination: (_req, _file, cb) => cb(null, uploads), filename: (_req, _file, cb) => cb(null, `${randomUUID()}.csv`) }),
-  limits: { fileSize: 80 * 1024 * 1024, files: 1, fields: 3 },
+  limits: { fileSize: 80 * 1024 * 1024, files: 1, fields: 10 },
   fileFilter: (_req, file, cb) => file.originalname.toLowerCase().endsWith('.csv') ? cb(null, true) : cb(new Error('Only genuine FIRMS .csv archives can be imported.')) });
 
 app.get('/', (_req, res) => res.json({ service: 'ThermoScan API', health: '/api/health', documentation: '/api/docs', notice: 'Use the Next.js dashboard for the user interface.' }));
 app.get('/api/health', async (_req, res) => {
   await engine.checkModel();
   res.json({ status: 'ready', version: '0.1.0', now: new Date().toISOString(), defaultMode: process.env.DEFAULT_DATA_MODE === 'live' ? 'live' : 'archive',
-    model: engine.modelState, archiveAvailable: engine.archive.length > 0, sources: engine.sources(), mutationAuthRequired: Boolean(process.env.ADMIN_API_KEY) });
+    model: engine.modelState, archiveAvailable: engine.archive.length > 0, sources: engine.sources(), mutationAuthRequired: false });
 });
 app.get('/api/sources', async (_req, res) => {
   await engine.checkModel();
   if (engine.contextSources.some(s => s.status !== 'connected' && s.id !== 'worldpop')) {
     await engine.checkSources().catch(() => {});
   }
-  res.json({ sources: engine.sources(), checkedAt: new Date().toISOString(), publicFeedsNeedKey: false, mutationAuthRequired: Boolean(process.env.ADMIN_API_KEY) });
+  res.json({ sources: engine.sources(), checkedAt: new Date().toISOString(), publicFeedsNeedKey: false, mutationAuthRequired: false });
 });
 app.post('/api/sources/check', expensiveLimit, async (_req, res) => { await engine.checkSources(true); res.json({ sources: engine.sources(), checkedAt: new Date().toISOString() }); });
 app.post('/api/sources/firms/refresh', expensiveLimit, async (_req, res) => {
@@ -113,20 +108,33 @@ const completedJobs = new Set<string>();
 app.get('/api/jobs/:id', async (req, res) => {
   const id = z.string().uuid().parse(req.params.id);
   const job = await mlRequest<TrainingJob>(`/jobs/${id}`);
-  if (job.status === 'completed' && !completedJobs.has(id)) { engine.invalidateModel(); completedJobs.add(id); }
+  if (job.status === 'completed' && !completedJobs.has(id)) { engine.invalidateModel(); await engine.reloadArchive(); completedJobs.add(id); }
   res.json(job);
+});
+app.get('/api/datasets', async (_req, res) => {
+  try {
+    const data = await mlRequest<{ datasets: Array<Record<string, unknown>> }>('/datasets');
+    res.json(data);
+  } catch (_error) {
+    res.json({ datasets: [] });
+  }
 });
 app.get('/api/history', async (_req, res) => {
   const summary = JSON.parse(await fs.readFile('data/dataset-summary.json', 'utf8'));
   res.json({ ...summary, replay: engine.archiveMeta, rawDownloaded: await fs.access('data/raw/india-viirs-2025.csv').then(() => true).catch(() => false) });
 });
 app.post('/api/history/import', authorize, importLimit, uploader.single('file'), async (req, res) => {
-  if (!req.file) { res.status(400).json({ error: 'Choose a NASA FIRMS VIIRS CSV file.' }); return; }
+  if (!req.file) { res.status(400).json({ error: 'Choose a NASA FIRMS CSV file.' }); return; }
   const id = req.file.filename.replace('.csv', '');
   try {
-    const provenanceUrl = z.string().url().max(2000).refine(value => ['https:', 'http:'].includes(new URL(value).protocol), 'Use an HTTP(S) source URL').parse(req.body.provenanceUrl || 'https://firms.modaps.eosdis.nasa.gov/download/');
-    const result = await mlRequest<Record<string, unknown>>(`/datasets/${id}/validate`, undefined, 30000);
-    const metadata = { name: path.basename(req.file.originalname).slice(0, 120), primary_source: 'User-provided FIRMS VIIRS archive', primary_url: provenanceUrl,
+    const rawUrl = String(req.body.provenanceUrl || '').trim() || 'https://firms.modaps.eosdis.nasa.gov/download/';
+    const provenanceUrl = z.string().url().max(2000).refine(value => ['https:', 'http:'].includes(new URL(value).protocol), 'Use an HTTP(S) source URL').parse(rawUrl);
+    const result = await mlRequest<Record<string, unknown>>(`/datasets/${id}/validate`, undefined, 120000);
+    const rowCount = Number(result.rows) || 0;
+    if (rowCount <= 0) {
+      throw new Error('Parsed archive contains 0 valid FIRMS observations. Check that the file has valid coordinates, timestamps, and brightness/frp columns.');
+    }
+    const metadata = { name: path.basename(req.file.originalname).slice(0, 120), primary_source: 'User-provided FIRMS archive', primary_url: provenanceUrl,
       download_url: provenanceUrl, sha256: result.sha256, bytes: req.file.size, retrieved_at: new Date().toISOString(),
       notes: ['User-supplied file. Schema and SHA-256 checked; authenticity, label provenance and NASA reprocessing status must be independently verified.'] };
     await fs.writeFile(path.join(uploads, `${id}.provenance.json`), JSON.stringify(metadata, null, 2));

@@ -74,7 +74,7 @@ export interface Overview {
   range: { from: string | null; to: string | null; availableFrom: string | null; availableTo: string | null };
   source: { name: string; url: string; retrievedAt: string | null; lastAttempt: string | null; sha256?: string };
   model: { available: boolean; modelId: string | null; featureMode: string | null; error?: string | null };
-  generatedAt: string; region: Region; window: string;
+  generatedAt: string; region: Region; regions?: Region[]; window: string;
 }
 export interface ClassMetric { precision: number; recall: number; 'f1-score': number; support: number }
 export interface Evaluation {

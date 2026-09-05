@@ -156,3 +156,27 @@ def test_training_rejects_a_short_live_window(tmp_path, real_rows):
     real_rows.to_csv(path, index=False)
     with pytest.raises(ValueError, match="500"):
         train(path, publish_replay=False)
+
+
+def test_india_viirs_2025_detects_316036_rows():
+    result = service.validate_dataset("default")
+    assert result["rows"] == 316036
+    assert result["quality"]["duplicates_removed"] == 0
+    assert result["quality"]["invalid_or_unsupported_rows"] == 0
+
+
+def test_firms_csv_different_country_venezuela():
+    result = service.validate_dataset("eb6afba0-7bbf-4ddd-af2b-f95be7d8fa21")
+    assert result["rows"] == 42963
+    assert result["rows"] > 0
+    assert "latitude" in result["columns"]
+    assert "longitude" in result["columns"]
+
+
+def test_invalid_schema_shows_clear_error(tmp_path):
+    invalid_csv = tmp_path / "invalid_firms.csv"
+    invalid_csv.write_text("random_col1,random_col2\n123,456\n")
+    with pytest.raises(ValueError, match="Missing required FIRMS column"):
+        normalize(pd.read_csv(invalid_csv), require_labels=False)
+
+

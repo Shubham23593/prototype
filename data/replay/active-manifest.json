@@ -1,0 +1,50 @@
+{
+  "name": "modis_2008_Angola.csv",
+  "mode": "archive",
+  "rows": 62,
+  "date_start": "2008-12-25T00:00:00+00:00",
+  "date_end": "2008-12-31T21:34:00+00:00",
+  "source_sha256": "591d54eafbb4299f2d3b7901ed78dde3a3f337be75577290cb55bec60a25f2e3",
+  "replay_sha256": "1b91a382b85008140edf73732d4e410c1839aa05cfe2474228b74fb7c0f8e090",
+  "source": {
+    "name": "modis_2008_Angola.csv",
+    "primary_source": "User-provided FIRMS archive",
+    "primary_url": "https://firms.modaps.eosdis.nasa.gov/download/",
+    "download_url": "https://firms.modaps.eosdis.nasa.gov/download/",
+    "sha256": "591d54eafbb4299f2d3b7901ed78dde3a3f337be75577290cb55bec60a25f2e3",
+    "bytes": 24656703,
+    "retrieved_at": "2026-09-05T19:13:53.850Z",
+    "notes": [
+      "User-supplied file. Schema and SHA-256 checked; authenticity, label provenance and NASA reprocessing status must be independently verified."
+    ]
+  },
+  "bbox": [
+    12.5841,
+    -15.8698,
+    21.91,
+    -5.4778
+  ],
+  "center": [
+    -10.6738,
+    17.2471
+  ],
+  "zoom": 5.0,
+  "region": {
+    "id": "active_archive",
+    "name": "modis_2008_Angola.csv (Observed)",
+    "bbox": [
+      12.5841,
+      -15.8698,
+      21.91,
+      -5.4778
+    ],
+    "center": [
+      -10.6738,
+      17.2471
+    ],
+    "zoom": 5.0
+  },
+  "selection": "All valid source observations from the final seven calendar days; no spatial or class sampling.",
+  "history": "Past-only 30-day features were computed from the full dataset before selecting this window.",
+  "training_overlap": "Historical replay may contain training-region records. Use the separate model-card holdout metrics, not replay performance, for evaluation."
+}

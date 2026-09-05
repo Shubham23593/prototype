@@ -200,7 +200,7 @@ def train_job(job_id: str, request: TrainRequest):
             download()
         with lock:
             jobs[job_id]["status"] = "running"
-        card = train(path, with_context=request.with_context, progress=update, publish_replay=False)
+        card = train(path, with_context=request.with_context, progress=update, publish_replay=True)
         load_model()
         with lock:
             jobs[job_id].update(status="completed", completed_at=timestamp(), model_id=card["model_id"], message="Model published with measured holdout metrics")
@@ -228,17 +228,74 @@ def get_job(job_id: str):
     return jobs[job_id]
 
 
+@app.get("/datasets")
+def list_datasets():
+    datasets = []
+    if DEFAULT_DATA.exists():
+        try:
+            val = validate_dataset("default")
+            datasets.append({
+                "dataset_id": "default",
+                "name": "Pinned India archive · Jan–Mar 2025",
+                "rows": val["rows"],
+                "quality": val["quality"],
+                "date_start": val["date_start"],
+                "date_end": val["date_end"],
+                "columns": val["columns"],
+                "has_sentinel": val.get("has_sentinel", False),
+                "has_osm": val.get("has_osm", False),
+                "has_context": val.get("has_sentinel", False) and val.get("has_osm", False),
+            })
+        except Exception:
+            pass
+
+    uploads_dir = ROOT / "data/uploads"
+    if uploads_dir.exists():
+        for p in uploads_dir.glob("*.csv"):
+            ds_id = p.stem
+            prov_path = uploads_dir / f"{ds_id}.provenance.json"
+            prov = json.loads(prov_path.read_text()) if prov_path.exists() else {}
+            try:
+                val = validate_dataset(ds_id)
+                datasets.append({
+                    "dataset_id": ds_id,
+                    "name": prov.get("name", p.name),
+                    "rows": val["rows"],
+                    "quality": val["quality"],
+                    "date_start": val["date_start"],
+                    "date_end": val["date_end"],
+                    "columns": val["columns"],
+                    "has_sentinel": val.get("has_sentinel", False),
+                    "has_osm": val.get("has_osm", False),
+                    "has_context": val.get("has_sentinel", False) and val.get("has_osm", False),
+                })
+            except Exception:
+                pass
+    return {"datasets": datasets}
+
+
 @app.get("/datasets/{dataset_id}/validate")
 def validate_dataset(dataset_id: str):
     path = dataset_path(dataset_id)
     if not path.exists():
         raise HTTPException(404, "Dataset not found")
     try:
-        frame, quality = normalize(pd.read_csv(path, low_memory=False), require_labels=True)
-        return {"dataset_id": dataset_id, "quality": quality, "rows": len(frame), "classes": {str(k): int(v) for k, v in frame["type"].value_counts().items()},
-                "date_start": frame["acquired_at"].min().isoformat() if len(frame) else None,
-                "date_end": frame["acquired_at"].max().isoformat() if len(frame) else None,
-                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "columns": list(frame.columns)}
+        frame, quality = normalize(pd.read_csv(path, low_memory=False), require_labels=False)
+        if len(frame) == 0:
+            raise ValueError("Parsed archive contains 0 valid FIRMS observations. Check coordinates, timestamps, and brightness/frp columns.")
+        classes = {str(k): int(v) for k, v in frame["type"].value_counts().items()} if "type" in frame.columns and frame["type"].notna().any() else {}
+        return {
+            "dataset_id": dataset_id,
+            "quality": quality,
+            "rows": len(frame),
+            "classes": classes,
+            "date_start": frame["acquired_at"].min().isoformat() if len(frame) else None,
+            "date_end": frame["acquired_at"].max().isoformat() if len(frame) else None,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "columns": list(frame.columns),
+            "has_sentinel": "ndvi" in frame.columns and (frame["ndvi"].notna().mean() >= 0.6),
+            "has_osm": "industrial_distance_capped_m" in frame.columns and (frame["industrial_distance_capped_m"].notna().mean() >= 0.6),
+        }
     except Exception as exc:
         raise HTTPException(422, f"Invalid archive: {exc}") from exc
 

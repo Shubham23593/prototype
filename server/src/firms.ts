@@ -11,10 +11,10 @@ export function makeObservation(row: Record<string, unknown>, mode: 'archive' | 
   const brightness = numeric('bright_ti4'), background = numeric('bright_ti5');
   const scan = numeric('scan'), track = numeric('track');
   if (![latitude, longitude, frp, brightness, background, scan, track].every(Number.isFinite)) return null;
-  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180 || frp < 0 || frp > 100000 || brightness < 150 || brightness > 600 || background < 150 || background > 600 || scan < .1 || scan > 2 || track < .1 || track > 2) return null;
-  if (row.instrument && String(row.instrument).toUpperCase() !== 'VIIRS') return null;
-  const date = String(row.acq_date || '');
-  const time = String(row.acq_time || '0').replace(/\.0$/, '').padStart(4, '0');
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180 || frp < 0 || frp > 100000 || brightness < 150 || brightness > 600 || background < 150 || background > 600 || scan < .01 || scan > 10 || track < .01 || track > 10) return null;
+  if (mode === 'live' && row.instrument && String(row.instrument).toUpperCase() !== 'VIIRS') return null;
+  const date = String(row.acq_date || '').replace(/\//g, '-');
+  const time = String(row.acq_time || '0').replace(/\.0$/, '').replace(/:/g, '').padStart(4, '0');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{4}$/.test(time) || Number(time.slice(0, 2)) > 23 || Number(time.slice(2)) > 59) return null;
   const acquiredAt = `${date}T${time.slice(0, 2)}:${time.slice(2)}:00.000Z`;
   const parsedTime = Date.parse(acquiredAt);

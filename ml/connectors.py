@@ -39,6 +39,13 @@ def _utm(longitude: float, latitude: float) -> int:
     return (32600 if latitude >= 0 else 32700) + min(60, max(1, int((longitude + 180) // 6) + 1))
 
 
+OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+]
+
+
 def osm_context(latitude: float, longitude: float) -> dict:
     from shapely.geometry import Point, LineString, Polygon
     from shapely.ops import transform as shape_transform, unary_union
@@ -51,13 +58,22 @@ def osm_context(latitude: float, longitude: float) -> dict:
       way(around:750,{latitude},{longitude})["landuse"~"^(forest|farmland|orchard)$"];
     );out tags center geom;'''
     try:
-        with httpx.Client(verify=ssl.create_default_context(), timeout=httpx.Timeout(28, connect=8), headers=HEADERS) as client:
-            response = client.post(OVERPASS_URL, data={"data": query})
-            response.raise_for_status()
-            payload = response.json()
-        if payload.get("remark"):
-            # An Overpass timeout may return HTTP 200 with incomplete elements.
-            raise ValueError("Overpass returned a partial query: " + str(payload["remark"])[:120])
+        payload = None
+        last_exc = None
+        for endpoint in OVERPASS_ENDPOINTS:
+            try:
+                with httpx.Client(verify=ssl.create_default_context(), timeout=httpx.Timeout(20, connect=6), headers=HEADERS) as client:
+                    response = client.post(endpoint, data={"data": query})
+                    response.raise_for_status()
+                    payload = response.json()
+                if payload.get("remark"):
+                    raise ValueError("Overpass returned a partial query: " + str(payload["remark"])[:120])
+                break
+            except Exception as exc:
+                last_exc = exc
+                continue
+        if payload is None:
+            return unavailable(source, last_exc or Exception("All Overpass endpoints failed"))
         epsg = _utm(longitude, latitude)
         x, y = _project([longitude], [latitude], epsg)
         point = Point(x[0], y[0])
@@ -168,7 +184,12 @@ def sentinel_context(latitude: float, longitude: float, acquired_at: str) -> dic
             response.raise_for_status()
             scenes = response.json().get("features", [])
         if not scenes:
-            return {"status": "no_scene", "source": source, "fetched_at": now(), "message": "No qualifying scene in the 60 days before this detection. No spectral values were substituted."}
+            msg = (
+                f"Historical observation ({end.year}) precedes the Sentinel-2 mission (launched June 2015). No optical scenes exist for this timeframe."
+                if end.year < 2015
+                else "No qualifying scene in the 60 days before this detection. No spectral values were substituted."
+            )
+            return {"status": "no_scene", "source": source, "fetched_at": now(), "message": msg}
         failures = []
         for scene in scenes[:3]:
             meta = {"scene_id": scene["id"], "acquired_at": scene["properties"]["datetime"], "scene_cloud_percent": scene["properties"].get("eo:cloud_cover"),
