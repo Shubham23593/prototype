@@ -266,7 +266,8 @@ def feature_matrix(frame: pd.DataFrame, features: list[str] | None = None) -> pd
 
 def calculate_risk(frp: float, brightness: float, confidence: str, category: str,
                    dist_m: float | None = None, power_nearby: bool = False,
-                   people: float | None = None, model_score: float | None = None) -> dict[str, Any]:
+                   people: float | None = None, model_score: float | None = None,
+                   facility_name: str | None = None) -> dict[str, Any]:
     """Calculate transparent risk: Hazard x Exposure x Confidence."""
     # 1. Hazard (0.1 to 1.0)
     cat_hazard = {
@@ -330,7 +331,9 @@ def calculate_risk(frp: float, brightness: float, confidence: str, category: str
     elif category == "persistent":
         factors.append("Known recurring fixed thermal source")
 
-    if dist <= 1000:
+    if facility_name and dist <= 2500:
+        factors.append(f"Near {facility_name} ({int(dist)} m)")
+    elif dist <= 1000:
         factors.append(f"Within {int(dist)} m of infrastructure")
     if power_nearby:
         factors.append("Critical power infrastructure nearby")
@@ -341,7 +344,7 @@ def calculate_risk(frp: float, brightness: float, confidence: str, category: str
     if not factors:
         factors.append("Standard baseline regional thermal activity")
 
-    return {
+    result_dict: dict[str, Any] = {
         "score": score,
         "level": level,
         "hazard": hazard,
@@ -349,6 +352,9 @@ def calculate_risk(frp: float, brightness: float, confidence: str, category: str
         "confidence": conf,
         "factors": factors,
     }
+    if facility_name:
+        result_dict["nearby_facility"] = str(facility_name)
+    return result_dict
 
 
 def derive_sih_classification(raw_class: str, proba_dict: dict[str, float],

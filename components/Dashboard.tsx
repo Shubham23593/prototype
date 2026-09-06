@@ -10,6 +10,7 @@ import HistoryView, { type ImportedDataset } from './HistoryView';
 import ModelView from './ModelView';
 import SourcesView from './SourcesView';
 import ObservationDrawer from './ObservationDrawer';
+import NotificationPanel from './NotificationPanel';
 import { ErrorState, Modal, Toast } from './ui';
 
 const PAGES: Record<Page,{label:string;title:string;description:string;icon:React.ReactNode}> = {
@@ -42,6 +43,10 @@ export default function Dashboard(){
   const [exportOpen,setExportOpen]=useState(false);
   const [imported,setImported]=useState<ImportedDataset|null>(null);
   const [toast,setToast]=useState<{message:string;error?:boolean}|null>(null);
+  const [notificationsOpen,setNotificationsOpen]=useState(false);
+  const [readAlertIds,setReadAlertIds]=useState<Set<string>>(new Set());
+  const [dismissedBannerSignature,setDismissedBannerSignature]=useState<string|null>(null);
+  const lastAlertSignatureRef=useRef<string>('');
   const exportRef=useRef<HTMLDivElement>(null);
   const initialModeApplied=useRef(false);
   const userChoseMode=useRef(false);
@@ -68,6 +73,22 @@ export default function Dashboard(){
   const data=overview.data;
   const availableRegions = data?.regions || REGIONS;
   const region = availableRegions.find(item=>item.id===regionId) || data?.region || availableRegions[0];
+  const alerts: ThermalEvent[] = data?.alerts || (data?.events?.filter(e => e.risk?.level === 'critical' || e.risk?.level === 'high') || []);
+  const unreadAlertCount = alerts.filter(a => !readAlertIds.has(a.id)).length;
+  const filterSignature = `${mode}-${region.id}-${windowSize}-${classKey}-${dates?.from || ''}-${dates?.to || ''}-${data?.total || 0}-${alerts.length}`;
+
+  useEffect(() => {
+    if (!data) return;
+    if (lastAlertSignatureRef.current !== filterSignature) {
+      lastAlertSignatureRef.current = filterSignature;
+      const count = alerts.length;
+      if (count > 0) {
+        const timeText = dates ? 'the selected observation period' : windowSize === '24h' ? 'the last 24 hours' : windowSize === '48h' ? 'the last 48 hours' : 'the last 7 days';
+        notify(`${count} High/Critical event${count === 1 ? '' : 's'} detected in ${timeText}.`);
+      }
+    }
+  }, [filterSignature, alerts.length, data, dates, windowSize, notify]);
+
   useEffect(() => {
     if (data?.region && mode === 'archive' && regionId === 'india' && data.region.id !== 'india') {
       setRegionId(data.region.id);
@@ -149,7 +170,7 @@ export default function Dashboard(){
     <div className="min-w-0 lg:pl-[224px]">
       <header className="sticky top-0 z-40 flex h-[62px] items-center justify-between border-b border-[#e7ecf0] bg-white/95 px-5 backdrop-blur-sm lg:px-7">
         <div className="flex items-center gap-2.5"><button aria-label="Open navigation" onClick={()=>setMobileNav(true)} className="icon-button mobile-menu-button -ml-2 lg:hidden"><Menu size={19}/></button><span className="hidden text-[10px] text-[#a6b0b8] sm:inline">Workspace</span><ChevronRight size={11} className="hidden text-[#b4bec6] sm:block"/><span className="text-[10px] font-medium text-[#768994]">{PAGES[page].label}</span></div>
-        <div className="flex items-center gap-3 sm:gap-5"><span className="hidden items-center gap-1.5 rounded-md border border-[#e8ecef] bg-[#f9fafb] px-2.5 py-1.5 text-[8px] text-[#92a1ab] md:flex"><span className="h-1 w-1 rounded-full bg-[#d3af88]"/>Research preview</span><UTCClock/><span className="h-4 w-px bg-[#edf0f3]"/><a href="/guide" target="_blank" rel="noopener noreferrer" title="Data and training guide" aria-label="Open data and training guide" className="icon-button -mx-1.5"><CircleHelp size={16} strokeWidth={1.6}/></a><button aria-label="Open review queue" title="Your review queue" onClick={()=>navigate('watchlist')} className="icon-button -mx-1.5"><Bell size={16} strokeWidth={1.6}/></button><button onClick={()=>navigate('sources')} aria-label="Workspace settings" className="flex h-[27px] w-[27px] items-center justify-center rounded-full border border-[#e5d9ce] bg-[#f2e8de] text-[8px] font-semibold text-[#ac8e73]">ST</button></div>
+        <div className="flex items-center gap-3 sm:gap-5"><span className="hidden items-center gap-1.5 rounded-md border border-[#e8ecef] bg-[#f9fafb] px-2.5 py-1.5 text-[8px] text-[#92a1ab] md:flex"><span className="h-1 w-1 rounded-full bg-[#d3af88]"/>Research preview</span><UTCClock/><span className="h-4 w-px bg-[#edf0f3]"/><a href="/guide" target="_blank" rel="noopener noreferrer" title="Data and training guide" aria-label="Open data and training guide" className="icon-button -mx-1.5"><CircleHelp size={16} strokeWidth={1.6}/></a><div className="relative"><button aria-label="Open alert notifications" title={alerts.length ? `${unreadAlertCount} unread alert${unreadAlertCount === 1 ? '' : 's'} in current window` : 'No active alerts'} onClick={()=>setNotificationsOpen(!notificationsOpen)} className={`icon-button relative -mx-1.5 ${notificationsOpen ? 'bg-[#f1f5f9] text-[#0f172a]' : ''}`}><Bell size={16} strokeWidth={1.6} className={unreadAlertCount > 0 ? 'text-[#dc2626]' : ''} />{unreadAlertCount > 0 && (<span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#dc2626] px-1 text-[8.5px] font-bold text-white ring-2 ring-white animate-pulse">{unreadAlertCount}</span>)}</button>{notificationsOpen && (<NotificationPanel alerts={alerts} readAlertIds={readAlertIds} onSelectAlert={(alert) => { setSelected(alert); setNotificationsOpen(false); }} onMarkAllRead={() => { setReadAlertIds(new Set(alerts.map(a => a.id))); }} onMarkRead={(id) => { setReadAlertIds(prev => new Set(prev).add(id)); }} onClose={() => setNotificationsOpen(false)} onOpenReviewQueue={() => { setNotificationsOpen(false); navigate('watchlist'); }} filterLabel={`${rangeLabel} · ${region.name}`} />)}</div><button onClick={()=>navigate('sources')} aria-label="Workspace settings" className="flex h-[27px] w-[27px] items-center justify-center rounded-full border border-[#e5d9ce] bg-[#f2e8de] text-[8px] font-semibold text-[#ac8e73]">ST</button></div>
       </header>
       <main className="mx-auto max-w-[1720px] px-5 pb-7 pt-7 lg:px-7">
         <div className="flex flex-wrap items-center justify-between gap-4"><div><div className="mb-2 flex items-center gap-1.5 text-[8px] font-medium uppercase tracking-[.14em] text-[#a7b2ba]"><Satellite size={10} strokeWidth={1.5}/>SATELLITE INSIGHTS, GROUNDED IN DATA</div><h1 className="font-display text-[26px] font-semibold tracking-[-.04em] text-[#283640] sm:text-[29px]">{PAGES[page].title}</h1><p className="mt-2 text-[10.5px] leading-5 text-[#91a0ab]">{PAGES[page].description}</p></div>
@@ -178,7 +199,31 @@ export default function Dashboard(){
                 ))}
               </optgroup>
             </select><ChevronDown size={10} className="pointer-events-none absolute right-3 top-3.5 text-[#a9b5be]"/></label>
-            <div className="ml-auto flex h-[37px] items-center rounded-lg border border-[#e2e8ec] bg-[#eef2f5] p-[3px] text-[10px]"><button onClick={()=>setDataMode('archive')} className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 ${mode==='archive'?'bg-white font-medium text-[#9c7e64] shadow-sm':'text-[#9fadb7]'}`}><History size={11}/>Historical</button><button onClick={()=>setDataMode('live')} className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 ${mode==='live'?'bg-white font-medium text-[#759584] shadow-sm':'text-[#9fadb7]'}`}><Radio size={11}/>Near-real-time</button></div>
+           <div className="ml-auto flex h-[37px] items-center rounded-lg border border-[#e2e8ec] bg-[#eef2f5] p-[3px] text-[10px]">
+  <button
+    onClick={() => setDataMode('archive')}
+    className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 transition ${
+      mode === 'archive'
+        ? 'bg-[#F3E8DE] font-semibold text-[#9C6F4F] shadow-sm'
+        : 'text-[#9FADB7]'
+    }`}
+  >
+    <History size={11} />
+    Historical
+  </button>
+
+  <button
+    onClick={() => setDataMode('live')}
+    className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 transition ${
+      mode === 'live'
+        ? 'bg-[#E4F2EA] font-semibold text-[#4F8A68] shadow-sm'
+        : 'text-[#9FADB7]'
+    }`}
+  >
+    <Radio size={11} />
+    Near-real-time
+  </button>
+</div>
           </div>
           <div className={`my-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3.5 py-2.5 text-[9px] ${mode==='archive'?'border-[#eee6da] bg-[#fcf8f1] text-[#b09775]':data?.availability==='ready'?'border-[#e0ebe5] bg-[#f3f8f5] text-[#87a593]':'border-[#eedad3] bg-[#fff5f2] text-[#c9622d]'}`}>
             <span className="flex items-center gap-2">
@@ -202,6 +247,53 @@ export default function Dashboard(){
           {data&&!data.model.available&&<div className="mb-4"><ErrorState message={data.model.error||'Inference is not currently available. No model scores are generated.'} retry={overview.reload}/></div>}
           {overview.error&&<div className="mb-4"><ErrorState message={overview.error} retry={overview.reload}/></div>}
         </>}
+
+        {spatialPage && alerts.length > 0 && dismissedBannerSignature !== filterSignature && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#fed7aa] bg-gradient-to-r from-[#fff7ed] via-[#fff1f2] to-[#fff7ed] px-4 py-3 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#fee2e2] text-[#dc2626]">
+                <Flame size={18} className="animate-pulse" />
+              </span>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-bold text-[#991b1b]">
+                    {alerts.length} High/Critical event{alerts.length === 1 ? '' : 's'} detected in {rangeLabel.toLowerCase()}.
+                  </span>
+                  <span className="rounded bg-[#fee2e2] px-1.5 py-0.5 text-[8.5px] font-semibold uppercase tracking-wider text-[#b91c1c]">
+                    Requires Ground Verification
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[10px] text-[#7c2d12]">
+                  Automatic classification and risk assessment identified {alerts.filter(a => a.risk?.level === 'critical').length} Critical and {alerts.filter(a => a.risk?.level === 'high').length} High priority events. Added to Review Queue for independent ground verification.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setNotificationsOpen(true)}
+                className="rounded-lg bg-[#dc2626] px-3 py-1.5 text-[10.5px] font-medium text-white shadow-sm hover:bg-[#b91c1c] transition-colors flex items-center gap-1.5"
+              >
+                <Bell size={12} />
+                Inspect alerts ({alerts.length})
+              </button>
+              <button
+                onClick={() => navigate('watchlist')}
+                className="rounded-lg border border-[#fdba74] bg-white px-3 py-1.5 text-[10.5px] font-medium text-[#c2410c] hover:bg-[#fff7ed] transition-colors"
+              >
+                Review Queue
+              </button>
+              <button
+                onClick={() => setDismissedBannerSignature(filterSignature)}
+                aria-label="Dismiss alert banner"
+                title="Dismiss banner"
+                className="p-1 text-[#9ca3af] hover:text-[#4b5563]"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className={spatialPage?'':'mt-6'}>
           {page==='overview'&&<OverviewView data={data} loading={overview.loading} region={data?.region || region} selected={selected} onSelect={onSelect} onPage={navigate} onSources={()=>navigate('sources')} fullScreen={fullScreen} onFullScreen={()=>setFullScreen(value=>!value)} evidence={evidence}/>}
           {page==='observations'&&<ObservationsView query={query} refresh={refresh} onSelect={onSelect}/>}

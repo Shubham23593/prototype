@@ -39,6 +39,8 @@ export interface Prediction {
   abstentionReason?: string | null;
   explanation?: string;
   risk?: RiskAssessment;
+  nearbyFacility?: string | null;
+  industrialDistanceM?: number | null;
   probabilities: { key: string; label: string; score: number }[];
 }
 export interface Review {
@@ -50,11 +52,13 @@ export interface ThermalEvent {
   scan: number; track: number; confidence: string; satellite: string; daynight: string;
   mode: DataMode; nasaType: number | null; prediction: Prediction;
   risk?: RiskAssessment;
+  nearbyFacility?: string | null;
   history: { detections: number; activeDays: number; coverageDays: number } | null;
   context?: {
     ndvi?: number; ndbi?: number; valid_pixel_fraction?: number; scene_day_offset?: number; sentinel_available?: boolean;
     industrial_distance_m?: number; industrial_within_1000m?: number; power_plant_nearby?: boolean;
     mine_or_quarry_nearby?: boolean; industrial_landuse_nearby?: boolean; refinery_or_flare_nearby?: boolean;
+    industrial_site_name?: string | null;
   };
   review?: Review | null;
 }
@@ -72,7 +76,7 @@ export interface Region {
 }
 export interface Overview {
   mode: DataMode; availability: 'ready' | 'unavailable' | 'stale'; notice: string;
-  events: ThermalEvent[]; total: number; mapLimit: number; truncated: boolean;
+  events: ThermalEvent[]; alerts?: ThermalEvent[]; total: number; mapLimit: number; truncated: boolean;
   stats: {
     detections: number;
     industrialCandidates: number;
@@ -87,6 +91,7 @@ export interface Overview {
     persistentCandidates: number;
     uncertain: number;
     highPriority: number;
+    criticalPriority?: number;
     meanFrp: number;
     totalFrp: number;
     reviewed: number;

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import { CLASSES, REGIONS } from '../../lib/constants';
+import { CLASSES, REGIONS, getNearestIndustrialFacility } from '../../lib/constants';
 import type { ClassKey, DataMode, Evidence, Overview, Prediction, Region, SourceStatus, ThermalEvent } from '../../lib/types';
 import { FirmsFeed, parseFirmsCsv, type Observation } from './firms';
 import { Store } from './store';
@@ -142,9 +142,14 @@ export class Engine {
 
   private decorate(observation: Observation): ThermalEvent {
     const prediction = this.modelState.available ? this.predictions.get(observation.event.id) : undefined;
+    const nearest = getNearestIndustrialFacility(observation.event.latitude, observation.event.longitude);
+    const nearbyFacility = prediction?.nearbyFacility || (nearest?.isNearby ? nearest.name : null) || observation.event.nearbyFacility || (nearest ? nearest.name : null);
+    const industrialDistanceM = prediction?.industrialDistanceM ?? (nearest ? nearest.distanceM : undefined) ?? observation.event.context?.industrial_distance_m;
+
     return {
       ...observation.event,
       risk: prediction?.risk,
+      nearbyFacility,
       prediction: prediction ? {
         classKey: prediction.classKey,
         primaryClass: prediction.primaryClass || CLASSES[prediction.classKey]?.primary || 'uncertain',
@@ -155,10 +160,17 @@ export class Engine {
         featureMode: prediction.featureMode,
         explanation: prediction.explanation,
         risk: prediction.risk,
+        nearbyFacility,
+        industrialDistanceM,
         abstentionReason: prediction.abstentionReason,
         probabilities: prediction.probabilities
       } : observation.event.prediction,
       history: prediction?.history || observation.event.history,
+      context: {
+        ...observation.event.context,
+        industrial_site_name: nearbyFacility || observation.event.context?.industrial_site_name,
+        industrial_distance_m: industrialDistanceM ?? observation.event.context?.industrial_distance_m,
+      },
       review: this.store.getReview(observation.event.id)
     };
   }
@@ -270,12 +282,34 @@ export class Engine {
       bins.set(key, bin);
     }
     const totalFrp = events.reduce((sum, event) => sum + event.frp, 0);
+
+    // Identify all High and Critical priority events for this filter
+    const alerts = events.filter(e => e.risk && (e.risk.level === 'high' || e.risk.level === 'critical'));
+    alerts.sort((a, b) => ((b.risk?.score || 0) - (a.risk?.score || 0)) || (b.frp - a.frp));
+
+    // Automatically synchronize High/Critical alerts to Review Queue if not already tracked
+    for (const alert of alerts) {
+      if (!this.store.getReview(alert.id)) {
+        await this.store.setReview(
+          alert.id,
+          'watching',
+          `Auto-flagged ${alert.risk?.level === 'critical' ? 'Critical' : 'High'} priority alert (${(alert.risk?.score ? alert.risk.score * 100 : 0).toFixed(0)}/100) · Requires ground verification`,
+          alert
+        );
+        alert.review = this.store.getReview(alert.id);
+      }
+    }
+
     const mapLimit = 3500;
-    const mapped = [...events].sort((a, b) => b.frp - a.frp || b.acquiredAt.localeCompare(a.acquiredAt)).slice(0, mapLimit);
+    // Prioritize all High/Critical alerts so they are guaranteed to appear on the map and never truncated
+    const alertIdSet = new Set(alerts.map(a => a.id));
+    const otherEvents = events.filter(e => !alertIdSet.has(e.id)).sort((a, b) => b.frp - a.frp || b.acquiredAt.localeCompare(a.acquiredAt));
+    const mapped = [...alerts, ...otherEvents].slice(0, mapLimit);
     const latest = [...events].sort((a, b) => b.acquiredAt.localeCompare(a.acquiredAt) || b.frp - a.frp).slice(0, 20);
     return {
       ...overview,
       events: mapped,
+      alerts,
       latest,
       total: events.length,
       mapLimit,
@@ -293,7 +327,8 @@ export class Engine {
         wasteCandidates: events.filter(e => e.prediction.classKey === 'waste').length,
         persistentCandidates: events.filter(e => e.prediction.classKey === 'persistent' || (e.prediction.classKey as string) === 'static').length,
         uncertain: events.filter(e => e.prediction.classKey === 'uncertain').length,
-        highPriority: events.filter(e => e.prediction.risk?.level === 'high' || e.prediction.risk?.level === 'critical').length,
+        highPriority: alerts.length,
+        criticalPriority: alerts.filter(e => e.risk?.level === 'critical').length,
         staticCandidates: events.filter(e => e.prediction.classKey === 'persistent' || (e.prediction.classKey as string) === 'static').length,
         highFrp: events.filter(event => event.frp >= 50).length,
         meanFrp: events.length ? totalFrp / events.length : 0,

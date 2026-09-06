@@ -107,3 +107,21 @@ test('API overview supports new industrial and non-industrial classKey filters',
     }
   } finally { server.closeAllConnections(); await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve())); }
 });
+
+test('API overview returns alerts array and decorates nearby industrial facility without fake data', async () => {
+  const server = app.listen(0, '0.0.0.0');
+  await new Promise<void>(resolve=>server.once('listening',resolve));
+  const port=(server.address() as {port:number}).port;
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/overview?region=india&window=24h&mode=archive`);
+    assert.equal(response.status, 200);
+    const data = await response.json() as { alerts: any[]; stats: { highPriority: number } };
+    assert.ok(Array.isArray(data.alerts));
+    assert.equal(data.alerts.length, data.stats.highPriority);
+    for (const alert of data.alerts) {
+      assert.ok(['high', 'critical'].includes(alert.risk?.level));
+      assert.ok(alert.latitude && alert.longitude);
+    }
+  } finally { server.closeAllConnections(); await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve())); }
+});
+

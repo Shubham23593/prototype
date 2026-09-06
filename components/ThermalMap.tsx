@@ -33,18 +33,118 @@ function ObservationLayer({ events, onSelect, visible, scaled }: {events: Therma
     if (!visible) return;
     const layer = L.layerGroup().addTo(map);
     const renderer = makeCanvas();
-    for (const event of [...events].reverse()) {
-      const color = CLASSES[event.prediction.classKey].color;
-      const marker = L.circleMarker([event.latitude, event.longitude], { renderer, radius: scaled ? Math.min(4.8, 1.7 + Math.sqrt(event.frp) * .19) : 3.2,
-        color, weight: .7, opacity: .95, fillColor: color, fillOpacity: .85 });
+
+    // Separate normal events and high/critical alerts so alerts render with prominent highlight on top
+    const normalEvents: ThermalEvent[] = [];
+    const alertEvents: ThermalEvent[] = [];
+    for (const event of events) {
+      if (event.risk?.level === 'critical' || event.risk?.level === 'high') {
+        alertEvents.push(event);
+      } else {
+        normalEvents.push(event);
+      }
+    }
+
+    // 1. Render normal observation markers
+    for (const event of [...normalEvents].reverse()) {
+      const color = CLASSES[event.prediction.classKey]?.color || '#94a3b8';
+      const marker = L.circleMarker([event.latitude, event.longitude], {
+        renderer,
+        radius: scaled ? Math.min(4.8, 1.7 + Math.sqrt(event.frp) * .19) : 3.2,
+        color,
+        weight: .7,
+        opacity: .95,
+        fillColor: color,
+        fillOpacity: .85
+      });
       const tip = document.createElement('div');
-      const title = document.createElement('div'); title.textContent = coordinates(event.latitude, event.longitude); title.style.fontWeight = '600';
-      const description = document.createElement('div'); description.textContent = `${event.frp.toFixed(1)} MW · ${CLASSES[event.prediction.classKey].short}`; description.style.color = '#acbcc7'; description.style.marginTop = '3px';
+      const title = document.createElement('div');
+      title.textContent = coordinates(event.latitude, event.longitude);
+      title.style.fontWeight = '600';
+      const description = document.createElement('div');
+      description.textContent = `${event.frp.toFixed(1)} MW · ${CLASSES[event.prediction.classKey]?.short || event.prediction.classKey}`;
+      description.style.color = '#acbcc7';
+      description.style.marginTop = '3px';
       tip.append(title, description);
       marker.bindTooltip(tip, { direction: 'top', offset: [0, -5] });
       marker.on('click', () => click.current(event));
       marker.addTo(layer);
     }
+
+    // 2. Render High & Critical alert markers with glowing halo and rich tooltips
+    for (const event of alertEvents) {
+      const isCritical = event.risk?.level === 'critical';
+      const haloColor = isCritical ? '#ef4444' : '#f97316';
+      const coreColor = isCritical ? '#dc2626' : '#ea580c';
+      const baseRadius = scaled ? Math.min(6.5, 2.8 + Math.sqrt(event.frp) * .22) : 4.5;
+
+      // Outer glowing halo
+      const halo = L.circleMarker([event.latitude, event.longitude], {
+        renderer,
+        radius: baseRadius + 6,
+        color: haloColor,
+        weight: 2,
+        opacity: 0.95,
+        fillColor: haloColor,
+        fillOpacity: 0.28,
+        dashArray: isCritical ? '5, 3' : undefined,
+      });
+
+      // Core alert marker with white border
+      const core = L.circleMarker([event.latitude, event.longitude], {
+        renderer,
+        radius: baseRadius,
+        color: '#ffffff',
+        weight: 1.8,
+        opacity: 1,
+        fillColor: coreColor,
+        fillOpacity: 0.95,
+      });
+
+      const tip = document.createElement('div');
+      tip.style.minWidth = '180px';
+      tip.style.padding = '2px';
+
+      const badge = document.createElement('div');
+      badge.textContent = isCritical ? 'CRITICAL PRIORITY ALERT' : 'HIGH PRIORITY ALERT';
+      badge.style.fontWeight = '800';
+      badge.style.fontSize = '10px';
+      badge.style.letterSpacing = '0.04em';
+      badge.style.color = haloColor;
+      badge.style.marginBottom = '3px';
+
+      const title = document.createElement('div');
+      title.textContent = `${coordinates(event.latitude, event.longitude)} · ${event.frp.toFixed(1)} MW FRP`;
+      title.style.fontWeight = '600';
+      title.style.fontSize = '11px';
+
+      const score = document.createElement('div');
+      score.textContent = `Risk Score: ${((event.risk?.score || 0) * 100).toFixed(1)}/100 · ${event.prediction.label}`;
+      score.style.color = '#cad5dd';
+      score.style.fontSize = '9.5px';
+      score.style.marginTop = '2px';
+
+      const facilityName = event.nearbyFacility || event.context?.industrial_site_name;
+      if (facilityName) {
+        const fac = document.createElement('div');
+        fac.textContent = `Facility: ${facilityName}`;
+        fac.style.color = '#fef08a';
+        fac.style.fontSize = '9px';
+        fac.style.marginTop = '3px';
+        tip.append(badge, title, score, fac);
+      } else {
+        tip.append(badge, title, score);
+      }
+
+      halo.bindTooltip(tip, { direction: 'top', offset: [0, -8] });
+      core.bindTooltip(tip, { direction: 'top', offset: [0, -8] });
+      halo.on('click', () => click.current(event));
+      core.on('click', () => click.current(event));
+
+      halo.addTo(layer);
+      core.addTo(layer);
+    }
+
     return () => { map.removeLayer(layer); if (map.hasLayer(renderer)) map.removeLayer(renderer); };
   }, [map, events, visible, scaled]);
   return null;
@@ -187,7 +287,13 @@ export default function ThermalMap({ events, region, selected, onSelect, fullScr
       <button title="Reset to selected region" aria-label="Reset map view" onClick={() => setReset(value => value + 1)} className="rounded-md border border-[#53656e80] bg-[#253640ed] p-2 text-[#c6d4dc]"><Crosshair size={15} /></button>
       <button title={fullScreen ? 'Close expanded map' : 'Expand map'} aria-label={fullScreen ? 'Close expanded map' : 'Expand map'} onClick={onFullScreen} className="rounded-md border border-[#53656e80] bg-[#253640ed] p-2 text-[#c6d4dc]">{fullScreen ? <X size={15} /> : <Maximize2 size={15} />}</button>
     </div>
-    <div className="absolute bottom-8 left-4 z-[900] flex flex-wrap gap-x-3 gap-y-2 rounded-md border border-[#52637050] bg-[#1c2c35db] px-3 py-2 text-[9px] font-medium text-[#b9c9d2] backdrop-blur-sm">
+    <div className="absolute bottom-8 left-4 z-[900] flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-[#52637050] bg-[#1c2c35db] px-3 py-2 text-[9px] font-medium text-[#b9c9d2] backdrop-blur-sm">
+      {events.some(e => e.risk?.level === 'critical' || e.risk?.level === 'high') && (
+        <span className="flex items-center gap-1.5 rounded-full bg-[#ef444426] border border-[#ef444466] px-2 py-0.5 font-bold text-[#fca5a5]">
+          <span className="h-2 w-2 rounded-full bg-[#ef4444] animate-pulse" />
+          {events.filter(e => e.risk?.level === 'critical' || e.risk?.level === 'high').length} High/Critical Alerts
+        </span>
+      )}
       {(['industrial', 'forest', 'agriculture', 'persistent', 'uncertain'] as const).map(key => (
         <span key={key} className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ background: CLASSES[key]?.color || '#9ca3af' }} />

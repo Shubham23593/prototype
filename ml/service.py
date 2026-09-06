@@ -161,7 +161,8 @@ def predict(request: PredictionRequest):
 
         risk = calculate_risk(
             frp=frp_val, brightness=bright_val, confidence=conf_str, category=class_key,
-            dist_m=dist_m_val, power_nearby=power_nearby, model_score=score
+            dist_m=dist_m_val, power_nearby=power_nearby, model_score=score,
+            facility_name=facility_name
         )
 
         results.append({
@@ -175,6 +176,8 @@ def predict(request: PredictionRequest):
             "featureMode": card["feature_mode"],
             "explanation": explanation,
             "risk": risk,
+            "nearbyFacility": str(facility_name) if facility_name and not pd.isna(facility_name) else None,
+            "industrialDistanceM": round(float(dist_m_val), 1) if dist_m_val is not None and not pd.isna(dist_m_val) else None,
             "abstentionReason": "Insufficient held-out evidence for this class" if poorly_validated else "Model score below 0.65" if score < threshold else None,
             "probabilities": [{"key": item["key"], "label": item["label"], "score": round(float(values[j]), 6)} for j, item in enumerate(card["classes"])],
             "history": {"detections": int(row["prior_detections_30d"]), "activeDays": int(row["prior_active_days_30d"]), "coverageDays": round(float(row["history_coverage_days"]), 2)}

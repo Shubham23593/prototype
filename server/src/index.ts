@@ -175,7 +175,7 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
 async function main() {
   await fs.mkdir(uploads, { recursive: true });
   await engine.initialize();
-  const port = Number(process.env.API_PORT || 4000);
+  const port = Number(process.env.PORT || process.env.API_PORT || 4000);
   const server = app.listen(port, '0.0.0.0', () => console.log(`ThermoScan API listening on 0.0.0.0:${port}. Historical rows: ${engine.archive.length}.`));
   // Startup probe with retry until Python ML service is listening
   (async () => {
