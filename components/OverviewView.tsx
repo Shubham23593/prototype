@@ -11,17 +11,50 @@ const ThermalMap = dynamic(() => import('./ThermalMap'), { ssr: false, loading: 
 export type OverviewData = Overview & { latest: ThermalEvent[] };
 
 function Sparkline({ values, color }: {values: number[]; color: string}) {
-  if (!values.length || values.every(value => value === 0)) return <div className="h-9 w-20" />;
+  if (!values.length || values.every(value => value === 0)) return null;
   const min = Math.min(...values), max = Math.max(...values);
-  const points = values.map((value, index) => [index * 76 / Math.max(values.length - 1, 1) + 2, 31 - ((value - min) / Math.max(max - min, 1)) * 25]);
-  return <svg width="80" height="37" viewBox="0 0 80 37" aria-label="Daily values in the selected window"><path d={`M ${points.map(point => point.join(' ')).join(' L ')} L 78 37 L 2 37 Z`} fill={color} opacity=".07" /><polyline points={points.map(point => point.join(',')).join(' ')} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" /><circle cx={points[points.length - 1][0]} cy={points[points.length - 1][1]} r="2" fill={color} /></svg>;
+  const range = Math.max(max - min, 0.001);
+  const w = 46, h = 20;
+  const points = values.map((value, index) => [
+    Math.round(index * (w - 4) / Math.max(values.length - 1, 1) + 2),
+    Math.round(h - 2 - ((value - min) / range) * (h - 4))
+  ]);
+  const last = points[points.length - 1];
+  return (
+    <div className="shrink-0 overflow-hidden">
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block overflow-hidden" aria-label="Daily trend">
+        <path d={`M ${points.map(p => p.join(' ')).join(' L ')} L ${w - 2} ${h} L 2 ${h} Z`} fill={color} opacity=".09" />
+        <polyline points={points.map(p => p.join(',')).join(' ')} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={last[0]} cy={last[1]} r="2" fill={color} />
+      </svg>
+    </div>
+  );
 }
 function Metric({ label, value, unit, detail, icon, color, values, available, help }: {label: string; value: number; unit?: string; detail: string; icon: React.ReactNode; color: string; values: number[]; available: boolean; help: string}) {
-  return <div className="panel min-w-0 px-5 pb-4 pt-4">
-    <div className="flex items-center justify-between gap-2"><span className="text-[11px] font-medium text-[#75828c]">{label}</span><span style={{color}}>{icon}</span></div>
-    <div className="mt-3 flex items-center justify-between gap-1"><div className="tabular whitespace-nowrap font-display text-[29px] font-semibold tracking-[-.035em] text-[#27333b]">{available ? formatNumber(value, unit ? 1 : 0) : '—'}{unit && <span className="ml-1.5 text-xs font-medium tracking-normal text-[#99a1a8]">{unit}</span>}</div><div className="hidden min-[1250px]:block"><Sparkline values={available ? values : []} color={color} /></div></div>
-    <div className="mt-2.5 flex items-center gap-1.5 text-[9px] text-[#929ba3]">{detail}<span title={help} tabIndex={0} aria-label={help}><CircleHelp size={10} /></span></div>
-  </div>;
+  const hasTrend = available && values.length > 0 && !values.every(v => v === 0);
+  return (
+    <div className="panel min-w-0 overflow-hidden px-4 pb-3.5 pt-3.5">
+      <div className="flex items-center justify-between gap-1.5">
+        <span className="truncate text-[11px] font-medium text-[#75828c]">{label}</span>
+        <span className="shrink-0" style={{color}}>{icon}</span>
+      </div>
+      <div className="mt-2.5 flex items-center justify-between gap-1">
+        <div className="tabular whitespace-nowrap font-display text-[23px] font-semibold tracking-[-.035em] text-[#27333b] sm:text-[25px]">
+          {available ? formatNumber(value, unit ? 1 : 0) : '—'}
+          {unit && <span className="ml-1 text-[11px] font-medium tracking-normal text-[#99a1a8]">{unit}</span>}
+        </div>
+        {hasTrend && (
+          <div className="hidden min-[1300px]:block shrink-0">
+            <Sparkline values={values} color={color} />
+          </div>
+        )}
+      </div>
+      <div className="mt-2 flex items-center gap-1.5 text-[9px] text-[#929ba3]">
+        <span className="truncate">{detail}</span>
+        <span className="shrink-0" title={help} tabIndex={0} aria-label={help}><CircleHelp size={10} /></span>
+      </div>
+    </div>
+  );
 }
 
 export default function OverviewView({ data, loading, region, selected, onSelect, onPage, onSources, fullScreen, onFullScreen, evidence }: {
