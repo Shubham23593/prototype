@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['*.e2b.app', 'localhost', '127.0.0.1'],
-  output: 'standalone',
+  output: process.env.VERCEL ? undefined : 'standalone',
   // Match the real historical CSV upload limit and bounded ML/evidence calls.
   experimental: { proxyClientMaxBodySize: '85mb', proxyTimeout: 180000 },
   async rewrites() {
