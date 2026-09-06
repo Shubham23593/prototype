@@ -26,11 +26,31 @@ CONTEXT_FEATURES = [
     "mine_or_quarry_nearby", "industrial_landuse_nearby"
 ]
 SIH_CLASSES = {
-    "industrial": "Potential Industrial Fire",
-    "forest": "Forest / Natural Fire",
-    "agriculture": "Agricultural or Waste Burning",
+    # Industrial
+    "normal_industrial": "Normal Industrial Heat",
     "persistent": "Persistent Thermal Source",
+    "gas_flare": "Gas Flare / Refinery Heat",
+    "industrial": "Potential Industrial Fire — Requires Ground Verification",
+    "major_industrial": "Major Industrial Incident Candidate — Requires Ground Verification",
+    # Non-Industrial
+    "forest": "Forest / Natural Fire",
+    "agriculture": "Agricultural Burning",
+    "waste": "Waste Burning",
+    "offshore": "Offshore / Water Thermal Anomaly",
+    # Uncertain
     "uncertain": "Other / Uncertain",
+}
+PRIMARY_CLASSES = {
+    "normal_industrial": "industrial",
+    "persistent": "industrial",
+    "gas_flare": "industrial",
+    "industrial": "industrial",
+    "major_industrial": "industrial",
+    "forest": "non_industrial",
+    "agriculture": "non_industrial",
+    "waste": "non_industrial",
+    "offshore": "non_industrial",
+    "uncertain": "uncertain",
 }
 CLASS_NAMES = {0: "Presumed vegetation fire", 1: "Active volcano", 2: "Static thermal source", 3: "Offshore thermal source"}
 CLASS_KEYS = {0: "vegetation", 1: "volcano", 2: "static", 3: "offshore"}
@@ -250,10 +270,15 @@ def calculate_risk(frp: float, brightness: float, confidence: str, category: str
     """Calculate transparent risk: Hazard x Exposure x Confidence."""
     # 1. Hazard (0.1 to 1.0)
     cat_hazard = {
+        "major_industrial": 0.95,
         "industrial": 0.85,
+        "gas_flare": 0.45,
+        "normal_industrial": 0.30,
         "forest": 0.65,
         "agriculture": 0.40,
-        "persistent": 0.35,  # Fixed, controlled furnace/flare is lower hazard than wild fire
+        "waste": 0.35,
+        "persistent": 0.35,
+        "offshore": 0.30,
         "uncertain": 0.25,
     }.get(category, 0.30)
     frp_factor = min(max(0.0, float(frp or 0)) / 60.0, 1.0) * 0.15
@@ -296,16 +321,23 @@ def calculate_risk(frp: float, brightness: float, confidence: str, category: str
         level = "low"
 
     factors = []
-    if category == "industrial":
-        factors.append("Proximity to mapped industrial facilities")
+    if category in ["industrial", "major_industrial"]:
+        factors.append("Proximity to mapped industrial facilities with acute thermal signature")
+    elif category == "gas_flare":
+        factors.append("Refinery or petrochemical flare profile")
+    elif category == "normal_industrial":
+        factors.append("Routine industrial process heat (furnace/kiln/boiler)")
+    elif category == "persistent":
+        factors.append("Known recurring fixed thermal source")
+
     if dist <= 1000:
         factors.append(f"Within {int(dist)} m of infrastructure")
     if power_nearby:
         factors.append("Critical power infrastructure nearby")
-    if frp and frp > 25:
+    if frp and frp >= 50:
+        factors.append(f"Extreme thermal output ({frp:.1f} MW FRP)")
+    elif frp and frp > 25:
         factors.append(f"High thermal output ({frp:.1f} MW FRP)")
-    if category == "persistent":
-        factors.append("Known recurring thermal source")
     if not factors:
         factors.append("Standard baseline regional thermal activity")
 
@@ -323,61 +355,115 @@ def derive_sih_classification(raw_class: str, proba_dict: dict[str, float],
                               frp: float, brightness: float, active_days: float,
                               dist_m: float | None = None, ndvi: float | None = None,
                               ndbi: float | None = None, power_nearby: bool = False,
-                              landuse_ind: bool = False, model_score: float | None = None) -> tuple[str, str, str]:
-    """Derive one of the 5 SIH categories based on multi-source evidence.
+                              landuse_ind: bool = False, refinery_or_flare_nearby: bool = False,
+                              facility_name: str | None = None, context_status: str = "ready",
+                              model_score: float | None = None,
+                              temperature_delta: float | None = None) -> tuple[str, str, str, str]:
+    """Derive 2-tier classification: (classKey, label, explanation, primaryClass).
 
-    Returns (classKey, label, explanation).
-    Categories:
-    - industrial: Potential Industrial Fire
-    - forest: Forest / Natural Fire
-    - agriculture: Agricultural or Waste Burning
-    - persistent: Persistent Thermal Source
-    - uncertain: Other / Uncertain
+    Primary Classes:
+    - industrial
+    - non_industrial
+    - uncertain
+
+    Event Categories:
+    - Industrial:
+      - normal_industrial: Normal Industrial Heat
+      - persistent: Persistent Thermal Source
+      - gas_flare: Gas Flare / Refinery Heat
+      - industrial: Potential Industrial Fire — Requires Ground Verification
+      - major_industrial: Major Industrial Incident Candidate — Requires Ground Verification
+    - Non-Industrial:
+      - forest: Forest / Natural Fire
+      - agriculture: Agricultural Burning
+      - waste: Waste Burning
+      - offshore: Offshore / Water Thermal Anomaly
+    - Uncertain:
+      - uncertain: Other / Uncertain
     """
-    dist = float(dist_m) if dist_m is not None and not np.isnan(dist_m) else 1500.0
-    has_ind_context = dist <= 1000 or power_nearby or landuse_ind
-    has_high_frp = (frp or 0) >= 12.0 or (brightness or 0) >= 335.0
-    is_persistent = (active_days or 0) >= 8 or raw_class in ["static", "persistent"]
+    # 1. Missing or unqueried spatial context safeguard
+    if context_status in ["not_queried", "unavailable"] or dist_m is None:
+        label = "Other / Uncertain"
+        exp = "Spatial industrial context is unavailable. Provisional classification; independent ground verification required."
+        return "uncertain", label, exp, "uncertain"
+
+    dist = float(dist_m)
+    has_ind_context = dist <= 1500.0 or power_nearby or landuse_ind or refinery_or_flare_nearby
+    frp_val = float(frp or 0)
+    bright_val = float(brightness or 300)
+    t_delta = float(temperature_delta or 0)
+    act_days = float(active_days or 0)
+    is_persistent_signal = act_days >= 8 or raw_class in ["static", "persistent"]
     ndvi_val = float(ndvi) if ndvi is not None and not np.isnan(ndvi) else None
     ndbi_val = float(ndbi) if ndbi is not None and not np.isnan(ndbi) else None
+    facility_str = f" ({facility_name})" if facility_name else ""
 
-    # Condition 1: Persistent Thermal Source
-    if is_persistent and (active_days or 0) >= 6:
-        label = "Persistent Thermal Source"
-        exp = f"Observed active across {int(active_days)} calendar dates in 30 days. Consistent with a furnace, flare stack, kiln, or fixed facility heat signature."
-        return "persistent", label, exp
+    # 2. Industrial Categories (when in proximity to industrial assets)
+    if has_ind_context:
+        # A. Gas Flare / Refinery Heat
+        if refinery_or_flare_nearby:
+            if act_days >= 5 or is_persistent_signal or bright_val >= 340.0 or t_delta >= 25.0:
+                label = "Gas Flare / Refinery Heat"
+                exp = f"Detected {int(dist)} m from petroleum/refinery infrastructure{facility_str} with elevated flare profile ({frp_val:.1f} MW FRP, {bright_val:.1f} K). Characteristic of operational gas flaring or refinery process heat. Not an uncontained fire."
+                return "gas_flare", label, exp, "industrial"
 
-    # Condition 2: Potential Industrial Fire
-    # Near industrial infrastructure with sudden acute thermal spike and low-to-moderate recurrence
-    if has_ind_context and (has_high_frp or (ndbi_val is not None and ndbi_val > 0.05)) and (active_days or 0) <= 6:
-        label = "Potential Industrial Fire"
-        exp = f"Detected {int(dist)} m from mapped infrastructure with high thermal intensity ({frp:.1f} MW FRP, {brightness:.1f} K). Provisional industrial fire candidate requiring verification."
-        return "industrial", label, exp
+        # B. Major Industrial Incident Candidate (Extreme FRP spike)
+        if (frp_val >= 50.0 or (bright_val >= 370.0 and frp_val >= 30.0) or t_delta >= 45.0) and act_days <= 6:
+            label = "Major Industrial Incident Candidate — Requires Ground Verification"
+            exp = f"Detected {int(dist)} m from mapped industrial assets{facility_str} with extreme thermal emission ({frp_val:.1f} MW FRP, {bright_val:.1f} K). High-priority candidate; satellite detection alone does not confirm an industrial explosion, blast, or accident. Requires ground verification."
+            return "major_industrial", label, exp, "industrial"
 
-    # Condition 3: Forest / Natural Fire
-    # Rural vegetation with high NDVI or natural fire signature, away from industrial centers
-    if not has_ind_context and ((ndvi_val is not None and ndvi_val >= 0.35) or raw_class in ["vegetation", "forest"]):
-        if (frp or 0) >= 15.0 or (ndvi_val is not None and ndvi_val >= 0.45):
+        # C. Potential Industrial Fire (Acute spike near industry)
+        if (frp_val >= 15.0 or bright_val >= 335.0 or (ndbi_val is not None and ndbi_val > 0.05)) and act_days <= 6:
+            label = "Potential Industrial Fire — Requires Ground Verification"
+            exp = f"Detected {int(dist)} m from mapped industrial assets{facility_str} with acute thermal intensity ({frp_val:.1f} MW FRP, {bright_val:.1f} K) and low recurrence ({int(act_days)} active dates in 30d). Provisional industrial fire candidate requiring ground verification."
+            return "industrial", label, exp, "industrial"
+
+        # D. Persistent Thermal Source (Chronic recurrence at fixed facility)
+        if is_persistent_signal and act_days >= 6:
+            label = "Persistent Thermal Source"
+            exp = f"Observed active across {int(act_days)} calendar dates in 30 days near mapped infrastructure{facility_str} ({int(dist)} m). Consistent with continuous fixed industrial furnace, kiln, boiler, or facility heat output. Not an acute fire incident."
+            return "persistent", label, exp, "industrial"
+
+        # E. Normal Industrial Heat (Routine furnace/chimney/boiler heat, moderate/low FRP)
+        label = "Normal Industrial Heat"
+        exp = f"Detected {int(dist)} m from mapped industrial facility{facility_str} with steady operational heat signature ({frp_val:.1f} MW FRP, {bright_val:.1f} K) across {int(act_days)} active dates. Characteristic of routine furnace, boiler, kiln, or chimney emissions. Not classified as a fire."
+        return "normal_industrial", label, exp, "industrial"
+
+    # 3. Non-Industrial Categories (Away from mapped industrial infrastructure, dist > 1500m)
+    # A. Offshore / Water Thermal Anomaly
+    if raw_class in ["offshore", 3]:
+        label = "Offshore / Water Thermal Anomaly"
+        exp = f"Thermal anomaly detected in coastal or marine waters ({frp_val:.1f} MW FRP). Profile matches maritime or offshore platform thermal signature."
+        return "offshore", label, exp, "non_industrial"
+
+    # B. Forest / Natural Fire (High vegetation cover or significant wildland FRP)
+    if (ndvi_val is not None and ndvi_val >= 0.35) or raw_class in ["vegetation", "forest"]:
+        if frp_val >= 18.0 or (ndvi_val is not None and ndvi_val >= 0.45):
             label = "Forest / Natural Fire"
             ndvi_detail = f"NDVI {ndvi_val:.2f}" if ndvi_val is not None else "vegetation cover"
-            exp = f"Located in natural vegetation ({ndvi_detail}) without nearby industrial facilities. Profile matches forest or wildland burning."
-            return "forest", label, exp
+            exp = f"Located in natural vegetation ({ndvi_detail}) {int(dist)} m from any mapped industry. Profile matches wildland or forest burning."
+            return "forest", label, exp, "non_industrial"
 
-    # Condition 4: Agricultural or Waste Burning
-    # Moderate/low FRP, agricultural / open land, low recurrence
-    if not has_ind_context and (active_days or 0) <= 3 and (frp or 0) < 25.0:
-        label = "Agricultural or Waste Burning"
-        exp = f"Short-duration thermal detection ({frp:.1f} MW FRP) with low recurrence in open rural terrain. Characteristic of seasonal crop-residue or waste burning."
-        return "agriculture", label, exp
+    # C. Agricultural Burning (Crop residue, stubble clearing)
+    if act_days <= 3 and 8.0 <= frp_val < 35.0:
+        label = "Agricultural Burning"
+        exp = f"Short-duration thermal detection ({frp_val:.1f} MW FRP) with low recurrence ({int(act_days)} active dates) in open agricultural terrain. Characteristic of seasonal crop-residue or stubble burning."
+        return "agriculture", label, exp, "non_industrial"
 
-    # Fallback to model probability if available
+    # D. Waste Burning (Low intensity, open rural/peri-urban biomass)
+    if act_days <= 2 and frp_val < 8.0:
+        label = "Waste Burning"
+        exp = f"Low-intensity thermal anomaly ({frp_val:.1f} MW FRP) with minimal recurrence in open rural or peri-urban terrain. Characteristic of localized biomass or municipal waste burning."
+        return "waste", label, exp, "non_industrial"
+
+    # Model score fallback
     if model_score is not None and model_score < 0.60:
-        return "uncertain", "Other / Uncertain", "Model score below confidence threshold; insufficient contextual evidence to confirm classification."
+        return "uncertain", "Other / Uncertain", "Model score below confidence threshold; insufficient contextual evidence to confirm classification.", "uncertain"
 
-    if raw_class in ["static", "persistent"]:
-        return "persistent", "Persistent Thermal Source", "Recurring thermal activity consistent with fixed infrastructure heat output."
-    elif raw_class in ["vegetation", "forest"]:
-        return "forest", "Forest / Natural Fire", "Thermal anomaly in open terrain consistent with vegetation fire."
+    if raw_class in ["vegetation", "forest"]:
+        return "forest", "Forest / Natural Fire", "Thermal anomaly in open terrain consistent with vegetation fire.", "non_industrial"
 
-    return "uncertain", "Other / Uncertain", "Provisional classification; independent ground verification required."
+    return "uncertain", "Other / Uncertain", "Provisional classification; independent ground verification required.", "uncertain"
+
 

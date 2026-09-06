@@ -1,5 +1,19 @@
 export type DataMode = 'archive' | 'live';
-export type ClassKey = 'industrial' | 'forest' | 'agriculture' | 'persistent' | 'uncertain' | 'unclassified' | 'vegetation' | 'static' | 'offshore';
+export type PrimaryClass = 'industrial' | 'non_industrial' | 'uncertain';
+export type ClassKey =
+  | 'normal_industrial'
+  | 'persistent'
+  | 'gas_flare'
+  | 'industrial'
+  | 'major_industrial'
+  | 'forest'
+  | 'agriculture'
+  | 'waste'
+  | 'offshore'
+  | 'uncertain'
+  | 'unclassified'
+  | 'vegetation'
+  | 'static';
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type SourceState = 'connected' | 'unreachable' | 'not_configured' | 'idle' | 'local' | 'degraded';
 export type Page = 'overview' | 'observations' | 'watchlist' | 'history' | 'model' | 'sources';
@@ -15,8 +29,14 @@ export interface RiskAssessment {
 }
 
 export interface Prediction {
-  classKey: ClassKey; rawClassKey?: ClassKey; label: string; score: number | null;
-  modelId: string | null; featureMode?: string; abstentionReason?: string | null;
+  classKey: ClassKey;
+  primaryClass?: PrimaryClass;
+  rawClassKey?: string;
+  label: string;
+  score: number | null;
+  modelId: string | null;
+  featureMode?: string;
+  abstentionReason?: string | null;
   explanation?: string;
   risk?: RiskAssessment;
   probabilities: { key: string; label: string; score: number }[];
@@ -34,7 +54,7 @@ export interface ThermalEvent {
   context?: {
     ndvi?: number; ndbi?: number; valid_pixel_fraction?: number; scene_day_offset?: number; sentinel_available?: boolean;
     industrial_distance_m?: number; industrial_within_1000m?: number; power_plant_nearby?: boolean;
-    mine_or_quarry_nearby?: boolean; industrial_landuse_nearby?: boolean;
+    mine_or_quarry_nearby?: boolean; industrial_landuse_nearby?: boolean; refinery_or_flare_nearby?: boolean;
   };
   review?: Review | null;
 }
@@ -56,9 +76,14 @@ export interface Overview {
   stats: {
     detections: number;
     industrialCandidates: number;
+    potentialIndustrialCandidates?: number;
+    majorIncidentCandidates?: number;
+    normalIndustrialCandidates?: number;
+    gasFlareCandidates?: number;
     forestCandidates: number;
     agricultureCandidates: number;
     agriCandidates?: number;
+    wasteCandidates?: number;
     persistentCandidates: number;
     uncertain: number;
     highPriority: number;
@@ -104,7 +129,7 @@ export interface Evidence {
     nearest_industrial?: {name: string; distance_m: number; tags: Record<string, string>; url: string} | null;
     features?: { id: string; name: string; distance_m: number; industrial: boolean; latitude: number; longitude: number; tags: Record<string,string>; url: string }[];
     total_features?: number; industrial_within_1000m?: number; industrial_distance_m?: number;
-    power_plant_nearby?: boolean; mine_or_quarry_nearby?: boolean; industrial_landuse_nearby?: boolean; };
+    power_plant_nearby?: boolean; mine_or_quarry_nearby?: boolean; industrial_landuse_nearby?: boolean; refinery_or_flare_nearby?: boolean; };
   sentinel: { status: string; source: string; message?: string; note?: string; ndvi?: number; ndbi?: number; scene_id?: string; acquired_at?: string;
     scene_cloud_percent?: number; valid_pixel_fraction?: number; catalog_url?: string; thumbnail_url?: string; day_offset?: number; method?: string; sentinel_available?: boolean };
   population: { status: string; source: string; message?: string; estimated_people?: number; reference_year?: string; radius_m?: number; note?: string };

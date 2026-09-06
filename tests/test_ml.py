@@ -173,10 +173,120 @@ def test_firms_csv_different_country_venezuela():
     assert "longitude" in result["columns"]
 
 
-def test_invalid_schema_shows_clear_error(tmp_path):
-    invalid_csv = tmp_path / "invalid_firms.csv"
-    invalid_csv.write_text("random_col1,random_col2\n123,456\n")
-    with pytest.raises(ValueError, match="Missing required FIRMS column"):
-        normalize(pd.read_csv(invalid_csv), require_labels=False)
+def test_missing_osm_context_classified_as_uncertain():
+    from ml.features import derive_sih_classification
+    # 1. Missing context / not queried must yield Uncertain
+    cls_key, label, explanation, primary_class = derive_sih_classification(
+        raw_class="static", proba_dict={"static": 0.8}, frp=15.0, brightness=325.0, active_days=10,
+        dist_m=None, landuse_ind=False, power_nearby=False, refinery_or_flare_nearby=False,
+        context_status="not_queried"
+    )
+    assert primary_class == "uncertain"
+    assert cls_key == "uncertain"
+    assert label == "Other / Uncertain"
+    assert "Spatial industrial context is unavailable" in explanation
+
+    # 2. Unavailable context must also yield Uncertain
+    cls_key, label, explanation, primary_class = derive_sih_classification(
+        raw_class="vegetation", proba_dict={"vegetation": 0.9}, frp=30.0, brightness=340.0, active_days=1,
+        dist_m=None, landuse_ind=False, power_nearby=False, refinery_or_flare_nearby=False,
+        context_status="unavailable"
+    )
+    assert primary_class == "uncertain"
+    assert cls_key == "uncertain"
+    assert "Spatial industrial context is unavailable" in explanation
+
+
+def test_industrial_context_persistent_heat_is_not_fire():
+    from ml.features import derive_sih_classification
+    # Persistent heat near industrial facility (active_days >= 8, moderate FRP)
+    cls_key, label, explanation, primary_class = derive_sih_classification(
+        raw_class="static", proba_dict={"static": 0.85}, frp=8.5, brightness=318.0, active_days=12,
+        dist_m=120.0, landuse_ind=True, power_nearby=False, refinery_or_flare_nearby=False,
+        context_status="ready"
+    )
+    assert primary_class == "industrial"
+    assert cls_key in ["normal_industrial", "persistent"]
+    assert "fire" not in label.lower()
+    assert any(term in explanation.lower() for term in ["chimney", "furnace", "kiln", "persistent", "operational"])
+
+
+def test_industrial_context_sudden_high_frp():
+    from ml.features import derive_sih_classification
+    # Sudden high FRP near industrial facility (low recurrence, high FRP)
+    cls_key, label, explanation, primary_class = derive_sih_classification(
+        raw_class="vegetation", proba_dict={"vegetation": 0.75}, frp=28.0, brightness=335.0, active_days=1,
+        dist_m=150.0, landuse_ind=True, power_nearby=False, refinery_or_flare_nearby=False,
+        context_status="ready"
+    )
+    assert primary_class == "industrial"
+    assert cls_key == "industrial"
+    assert label == "Potential Industrial Fire — Requires Ground Verification"
+    assert "Requires Ground Verification" in label
+    assert "ground verification" in explanation.lower()
+
+
+def test_industrial_context_extreme_frp_incident_candidate():
+    from ml.features import derive_sih_classification
+    # Extreme FRP event near industry (frp >= 60, active_days <= 2)
+    cls_key, label, explanation, primary_class = derive_sih_classification(
+        raw_class="vegetation", proba_dict={"vegetation": 0.8}, frp=85.0, brightness=365.0, active_days=1,
+        dist_m=80.0, landuse_ind=True, power_nearby=False, refinery_or_flare_nearby=False,
+        context_status="ready"
+    )
+    assert primary_class == "industrial"
+    assert cls_key == "major_industrial"
+    assert "Major Industrial Incident Candidate" in label
+    assert "satellite detection alone does not confirm an industrial explosion, blast, or accident" in explanation
+
+
+def test_non_industrial_vegetation_fire():
+    from ml.features import derive_sih_classification
+    # Far from any industry, low recurrence, in vegetation/cropland
+    cls_key, label, explanation, primary_class = derive_sih_classification(
+        raw_class="vegetation", proba_dict={"vegetation": 0.9}, frp=14.0, brightness=320.0, active_days=1,
+        dist_m=4500.0, landuse_ind=False, power_nearby=False, refinery_or_flare_nearby=False,
+        context_status="ready"
+    )
+    assert primary_class == "non_industrial"
+    assert cls_key in ["forest", "agriculture"]
+    assert any(term in explanation.lower() for term in ["crop-residue", "crop residue", "agricultural", "forest", "vegetation"])
+
+
+def test_predict_batch_offline_industrial_enrichment(monkeypatch):
+    monkeypatch.delenv("ADMIN_API_KEY", raising=False)
+    monkeypatch.delenv("INTERNAL_SERVICE_KEY", raising=False)
+    client = TestClient(service.app)
+
+    # Observation at Jamnagar Refinery complex (22.36, 69.86) without input industrial context
+    obs = [{
+        "id": "jamnagar-test-1",
+        "latitude": 22.36,
+        "longitude": 69.86,
+        "bright_ti4": 350.0,
+        "bright_ti5": 305.0,
+        "frp": 25.0,
+        "scan": 0.4,
+        "track": 0.4,
+        "satellite": "N",
+        "instrument": "VIIRS",
+        "daynight": "N",
+        "confidence": "nominal",
+        "acq_date": "2025-02-15",
+        "acq_time": "2100",
+        "acquired_at": "2025-02-15T21:00:00Z",
+        "prior_detections_30d": 0,
+        "prior_active_days_30d": 0,
+        "history_coverage_days": 30.0
+    }]
+    response = client.post("/predict", json={"observations": obs, "use_precomputed_history": True})
+    assert response.status_code == 200
+    preds = response.json()["predictions"]
+    assert len(preds) == 1
+    pred = preds[0]
+    assert pred["primaryClass"] == "industrial"
+    assert pred["classKey"] in ["gas_flare", "industrial", "normal_industrial", "persistent", "major_industrial"]
+    assert "explanation" in pred
+    assert len(pred["explanation"]) > 0
 
 

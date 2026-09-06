@@ -21,7 +21,8 @@ const engine = new Engine();
 const strictDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value, 'Invalid calendar date');
 const querySchema = z.object({
   mode: z.enum(['archive', 'live']).default('archive'), region: z.string().refine(value => engine.getRegions().some(region => region.id === value), 'Unknown region').default('india'),
-  window: z.enum(['24h', '48h', '7d']).default('24h'), classKey: z.enum(['all', 'industrial', 'forest', 'agriculture', 'persistent', 'uncertain', 'unclassified', 'vegetation', 'static', 'offshore']).default('all'),
+  window: z.enum(['24h', '48h', '7d']).default('24h'),
+  classKey: z.enum(['all', 'industrial', 'major_industrial', 'normal_industrial', 'gas_flare', 'persistent', 'forest', 'agriculture', 'waste', 'offshore', 'uncertain', 'unclassified', 'vegetation', 'static']).default('all'),
   from: strictDate.optional(), to: strictDate.optional(), q: z.string().max(100).optional(),
 }).refine(value => Boolean(value.from) === Boolean(value.to), 'Provide both from and to dates')
   .refine(value => !value.from || !value.to || (value.from <= value.to && Date.parse(value.to) - Date.parse(value.from) <= 6 * 86400000), 'Select a date range of up to seven calendar days');

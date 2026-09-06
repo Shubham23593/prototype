@@ -4,7 +4,7 @@ import { ArrowRight, Bookmark, CheckCheck, ChevronLeft, ChevronRight, Download, 
 import { api, useApi } from '@/lib/api';
 import { coordinates, formatDate, formatNumber, formatTime, satelliteName } from '@/lib/constants';
 import type { SourceStatus, ThermalEvent } from '@/lib/types';
-import { ClassBadge, EmptyState, ErrorState, Loading, RiskBadge, StatusBadge } from './ui';
+import { ClassBadge, EmptyState, ErrorState, Loading, PrimaryBadge, RiskBadge, StatusBadge } from './ui';
 
 function formatConfidence(val: unknown): string {
   if (val === 'h' || val === 'H') return 'High';
@@ -19,7 +19,7 @@ function ObservationTable({ events, onSelect, watchlist = false, onRemove }: {ev
     <tbody className="divide-y divide-[#edf0f3]">{events.map(event => <tr key={event.id} className="group transition-colors hover:bg-[#fcfaf8]"><td className="px-5 py-4"><button onClick={() => onSelect(event)} className="flex items-center gap-3 text-left"><span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#edf0f2] bg-[#f7f9fa] text-[#9aaab4]"><MapPin size={15} strokeWidth={1.5} /></span><span><span className="tabular block text-[11px] font-medium text-[#586976]">{coordinates(event.latitude,event.longitude)}</span><span className="mt-1 block font-mono text-[8px] text-[#aab3bb]">{event.id}</span>{watchlist && event.review?.note && <span className="mt-1 block max-w-xs truncate text-[9px] text-[#8e98a1] italic">"{event.review.note}"</span>}</span></button></td>
       <td className="px-3 py-4"><span className="block text-[#71828e]">{formatDate(event.acquiredAt,{year:undefined})} · {formatTime(event.acquiredAt)}</span><span className="mt-1 block text-[9px] text-[#a3aeb7]">{satelliteName(event.satellite)} · {event.daynight === 'D' ? 'Day' : 'Night'}</span></td>
       <td className="px-3 py-4"><span className="text-[10px] text-[#6d7e8a]">{formatConfidence(event.confidence)}</span></td>
-      <td className="px-3 py-4"><ClassBadge classKey={event.prediction.classKey} compact /></td>
+      <td className="px-3 py-4"><div className="flex flex-col items-start gap-1"><PrimaryBadge primaryClass={event.prediction.primaryClass} compact /><ClassBadge classKey={event.prediction.classKey} compact /></div></td>
       <td className="tabular whitespace-nowrap px-3 py-4 font-medium text-[#647580]">{event.frp.toFixed(1)} <span className="text-[9px] font-normal text-[#a4afb7]">MW</span>{event.frp >= 50 && <span className="ml-1.5 inline-block h-1 w-1 rounded-full bg-[#df935b]" title="Above the 50 MW review threshold" />}</td>
       <td className="tabular px-3 py-4 text-[#83929c]">{event.prediction.score === null ? '—' : `${(event.prediction.score*100).toFixed(1)}%`}<span className="mt-1 block text-[8px] text-[#b0b8be]">{event.prediction.classKey === 'uncertain' ? 'Abstained' : 'Uncalibrated'}</span></td>
       <td className="px-3 py-4"><RiskBadge level={event.risk?.level} compact /></td>

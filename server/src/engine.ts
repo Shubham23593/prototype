@@ -147,6 +147,7 @@ export class Engine {
       risk: prediction?.risk,
       prediction: prediction ? {
         classKey: prediction.classKey,
+        primaryClass: prediction.primaryClass || CLASSES[prediction.classKey]?.primary || 'uncertain',
         rawClassKey: prediction.rawClassKey,
         label: prediction.label,
         score: prediction.score,
@@ -202,7 +203,16 @@ export class Engine {
     if (filters.classKey !== 'all') events = events.filter(event => event.prediction.classKey === filters.classKey);
     if (filters.q) {
       const search = filters.q.toLowerCase().trim();
-      events = events.filter(event => [event.id, String(event.latitude), String(event.longitude), event.prediction.label, event.satellite].some(value => value.toLowerCase().includes(search)));
+      events = events.filter(event => [
+        event.id,
+        String(event.latitude),
+        String(event.longitude),
+        event.prediction.label,
+        event.prediction.classKey,
+        event.prediction.primaryClass || '',
+        event.prediction.explanation || '',
+        event.satellite
+      ].some(value => value.toLowerCase().includes(search)));
     }
     const archive = filters.mode === 'archive';
     const stale = !archive && (this.firms.source.status !== 'connected' || !this.firms.lastSuccess || Date.now() - Date.parse(this.firms.lastSuccess) > 90 * 60000);
@@ -225,7 +235,18 @@ export class Engine {
 
   async overview(filters: Filters): Promise<Overview & {latest: ThermalEvent[]}> {
     const { events, overview } = await this.query(filters);
-    const distributionKeys: ClassKey[] = ['industrial', 'forest', 'agriculture', 'persistent', 'uncertain'];
+    const distributionKeys: ClassKey[] = [
+      'industrial',
+      'major_industrial',
+      'normal_industrial',
+      'gas_flare',
+      'persistent',
+      'forest',
+      'agriculture',
+      'waste',
+      'offshore',
+      'uncertain'
+    ];
     const distribution = distributionKeys.map(key => ({
       key,
       name: CLASSES[key]?.short || key,
@@ -261,9 +282,15 @@ export class Engine {
       truncated: events.length > mapLimit,
       stats: {
         detections: events.length,
-        industrialCandidates: events.filter(e => e.prediction.classKey === 'industrial').length,
+        industrialCandidates: events.filter(e => e.prediction.primaryClass === 'industrial' || ['industrial', 'major_industrial', 'normal_industrial', 'gas_flare', 'persistent'].includes(e.prediction.classKey)).length,
+        potentialIndustrialCandidates: events.filter(e => e.prediction.classKey === 'industrial').length,
+        majorIncidentCandidates: events.filter(e => e.prediction.classKey === 'major_industrial').length,
+        normalIndustrialCandidates: events.filter(e => e.prediction.classKey === 'normal_industrial').length,
+        gasFlareCandidates: events.filter(e => e.prediction.classKey === 'gas_flare').length,
         forestCandidates: events.filter(e => e.prediction.classKey === 'forest' || (e.prediction.classKey as string) === 'vegetation').length,
         agricultureCandidates: events.filter(e => e.prediction.classKey === 'agriculture').length,
+        agriCandidates: events.filter(e => e.prediction.classKey === 'agriculture' || e.prediction.classKey === 'waste').length,
+        wasteCandidates: events.filter(e => e.prediction.classKey === 'waste').length,
         persistentCandidates: events.filter(e => e.prediction.classKey === 'persistent' || (e.prediction.classKey as string) === 'static').length,
         uncertain: events.filter(e => e.prediction.classKey === 'uncertain').length,
         highPriority: events.filter(e => e.prediction.risk?.level === 'high' || e.prediction.risk?.level === 'critical').length,
@@ -302,6 +329,7 @@ export class Engine {
       power_plant_nearby: evidence.osm?.power_plant_nearby ? 1.0 : 0.0,
       mine_or_quarry_nearby: evidence.osm?.mine_or_quarry_nearby ? 1.0 : 0.0,
       industrial_landuse_nearby: evidence.osm?.industrial_landuse_nearby ? 1.0 : 0.0,
+      refinery_or_flare_nearby: evidence.osm?.refinery_or_flare_nearby ? 1.0 : 0.0,
       prior_detections_30d: event.history?.detections ?? 0,
       prior_active_days_30d: event.history?.activeDays ?? 0,
       history_coverage_days: event.history?.coverageDays ?? 0,
@@ -322,6 +350,7 @@ export class Engine {
         power_plant_nearby: evidence.osm?.power_plant_nearby,
         mine_or_quarry_nearby: evidence.osm?.mine_or_quarry_nearby,
         industrial_landuse_nearby: evidence.osm?.industrial_landuse_nearby,
+        refinery_or_flare_nearby: evidence.osm?.refinery_or_flare_nearby,
       };
     }
     return prediction;

@@ -92,3 +92,18 @@ test('API validates unknown regions, invalid dates and unbounded windows before 
     }
   } finally { server.closeAllConnections(); await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve())); }
 });
+
+test('API overview supports new industrial and non-industrial classKey filters', async () => {
+  const server = app.listen(0, '0.0.0.0');
+  await new Promise<void>(resolve=>server.once('listening',resolve));
+  const port=(server.address() as {port:number}).port;
+  try {
+    for (const validClass of ['industrial', 'major_industrial', 'normal_industrial', 'gas_flare', 'persistent', 'forest', 'agriculture', 'waste', 'offshore', 'uncertain']) {
+      const response = await fetch(`http://127.0.0.1:${port}/api/overview?region=india&classKey=${validClass}&mode=archive`);
+      assert.equal(response.status, 200, `Expected 200 for valid classKey ${validClass}`);
+      const data = await response.json() as { distribution: Array<{ key: string }> };
+      assert.ok(Array.isArray(data.distribution));
+      assert.ok(data.distribution.some(d => d.key === validClass));
+    }
+  } finally { server.closeAllConnections(); await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve())); }
+});

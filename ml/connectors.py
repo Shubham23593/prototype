@@ -73,6 +73,46 @@ def osm_context(latitude: float, longitude: float) -> dict:
                 last_exc = exc
                 continue
         if payload is None:
+            # Fallback to verified offline industrial index if inside an industrial zone
+            try:
+                from ml.industrial_index import lookup_industrial_context
+                fallback = lookup_industrial_context(latitude, longitude)
+                if fallback["in_industrial_zone"]:
+                    return {
+                        "status": "ready",
+                        "source": "Offline Industrial Spatial Index (Overpass endpoints unreachable)",
+                        "fetched_at": now(),
+                        "snapshot_at": now(),
+                        "radius_m": 1500,
+                        "features": [{
+                            "id": "offline/registry",
+                            "name": fallback["nearest_facility_name"],
+                            "tags": {"landuse": "industrial", "type": fallback["facility_type"]},
+                            "industrial": True,
+                            "distance_m": fallback["industrial_distance_m"],
+                            "distance_basis": "verified offline industrial registry centroid",
+                            "contains_detection": fallback["industrial_distance_m"] <= 1000,
+                            "latitude": latitude,
+                            "longitude": longitude,
+                            "url": "https://www.openstreetmap.org/"
+                        }],
+                        "total_features": 1,
+                        "nearest_industrial": {
+                            "name": fallback["nearest_facility_name"],
+                            "distance_m": fallback["industrial_distance_m"],
+                            "tags": {"landuse": "industrial", "type": fallback["facility_type"]},
+                            "url": "https://www.openstreetmap.org/"
+                        },
+                        "industrial_distance_m": fallback["industrial_distance_m"],
+                        "industrial_within_1000m": 1 if fallback["industrial_distance_m"] <= 1000 else 0,
+                        "power_plant_nearby": fallback["power_plant_nearby"],
+                        "mine_or_quarry_nearby": False,
+                        "industrial_landuse_nearby": fallback["industrial_landuse_nearby"],
+                        "refinery_or_flare_nearby": fallback["refinery_or_flare_nearby"],
+                        "note": "Sourced from verified offline industrial registry following Overpass timeout. Proximity is context, not proof of fire."
+                    }
+            except Exception:
+                pass
             return unavailable(source, last_exc or Exception("All Overpass endpoints failed"))
         epsg = _utm(longitude, latitude)
         x, y = _project([longitude], [latitude], epsg)
@@ -109,6 +149,34 @@ def osm_context(latitude: float, longitude: float) -> dict:
         power_plant = any(f["tags"].get("power") in ["plant", "generator"] for f in features)
         mine_or_quarry = any(f["tags"].get("landuse") in ["quarry", "mining"] or f["tags"].get("industrial") in ["mine", "quarry"] for f in features)
         industrial_landuse = any(f["tags"].get("landuse") == "industrial" for f in features)
+        refinery_or_flare = any(
+            f["tags"].get("industrial") in ["refinery", "petrochemical", "gas_flare"] or
+            f["tags"].get("man_made") in ["flare", "flare_stack"] or
+            "refinery" in f["tags"].get("name", "").lower()
+            for f in features
+        )
+        if not industrial_features:
+            try:
+                from ml.industrial_index import lookup_industrial_context
+                offline_info = lookup_industrial_context(latitude, longitude)
+                if offline_info["in_industrial_zone"]:
+                    power_plant = power_plant or offline_info["power_plant_nearby"]
+                    industrial_landuse = industrial_landuse or offline_info["industrial_landuse_nearby"]
+                    refinery_or_flare = refinery_or_flare or offline_info["refinery_or_flare_nearby"]
+                    industrial_features.append({
+                        "id": "offline/registry",
+                        "name": offline_info["nearest_facility_name"],
+                        "tags": {"landuse": "industrial", "type": offline_info["facility_type"]},
+                        "industrial": True,
+                        "distance_m": offline_info["industrial_distance_m"],
+                        "distance_basis": "verified offline industrial registry",
+                        "contains_detection": offline_info["industrial_distance_m"] <= 1000,
+                        "latitude": latitude,
+                        "longitude": longitude,
+                        "url": "https://www.openstreetmap.org/"
+                    })
+            except Exception:
+                pass
         nearest_dist = industrial_features[0]["distance_m"] if industrial_features else None
         return {"status": "ready", "source": source, "fetched_at": now(), "snapshot_at": payload.get("osm3s", {}).get("timestamp_osm_base"),
                 "radius_m": 1500, "features": features[:100], "total_features": len(features),
@@ -118,7 +186,8 @@ def osm_context(latitude: float, longitude: float) -> dict:
                 "power_plant_nearby": power_plant,
                 "mine_or_quarry_nearby": mine_or_quarry,
                 "industrial_landuse_nearby": industrial_landuse,
-                "note": "Current OSM snapshot, not historical ground truth. Proximity is context, not proof of an industrial fire. Mapping coverage varies."}
+                "refinery_or_flare_nearby": refinery_or_flare,
+                "note": "Current OSM snapshot with offline industrial registry fallback. Proximity is context, not proof of an industrial fire. Mapping coverage varies."}
     except Exception as exc:
         return unavailable(source, exc)
 

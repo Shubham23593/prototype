@@ -49,7 +49,19 @@ export default function Dashboard(){
   const clearToast=useCallback(()=>setToast(null),[]);
   const forceRefresh=useCallback(()=>setRefresh(value=>value+1),[]);
   const health=useApi<{sources:SourceStatus[];defaultMode:DataMode;archiveAvailable:boolean}>('/api/health',refresh,60000);
-  useEffect(()=>{if(health.data&&!initialModeApplied.current){initialModeApplied.current=true;if(!userChoseMode.current)setMode(health.data.defaultMode);}},[health.data]);
+  useEffect(() => {
+    if (health.data && !initialModeApplied.current) {
+      initialModeApplied.current = true;
+      if (!userChoseMode.current) {
+        setMode(health.data.defaultMode);
+        if (health.data.defaultMode === 'live') {
+          setRegionId('india');
+          setWindowSize('24h');
+          setClassKey('all');
+        }
+      }
+    }
+  }, [health.data]);
   const query=new URLSearchParams({mode,region:regionId,window:windowSize,classKey,...(dates||{})}).toString();
   const spatialPage=page==='overview'||page==='observations';
   const overview=useApi<OverviewData>(spatialPage?`/api/overview?${query}`:null,refresh,mode==='live'&&spatialPage?60000:0);
@@ -80,7 +92,18 @@ export default function Dashboard(){
   },[]);
   useEffect(()=>{if(!fullScreen)return;const key=(event:KeyboardEvent)=>{if(event.key==='Escape')setFullScreen(false);};document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key);},[fullScreen]);
   useEffect(()=>{if(!exportOpen)return;const close=(event:MouseEvent)=>{if(!exportRef.current?.contains(event.target as Node))setExportOpen(false);};document.addEventListener('mousedown',close);return()=>document.removeEventListener('mousedown',close);},[exportOpen]);
-  function setDataMode(next:DataMode){userChoseMode.current=true;setMode(next);setDates(null);setSelected(null);setEvidence(null);}
+  function setDataMode(next: DataMode) {
+    userChoseMode.current = true;
+    setMode(next);
+    setDates(null);
+    setSelected(null);
+    setEvidence(null);
+    if (next === 'live') {
+      setRegionId('india');
+      setWindowSize('24h');
+      setClassKey('all');
+    }
+  }
   async function reload(){
     setRefreshing(true);
     try{
@@ -137,7 +160,24 @@ export default function Dashboard(){
           <div className="mt-6 flex flex-wrap items-center gap-2.5">
             <label className="relative"><MapPin size={13} className="pointer-events-none absolute left-3 top-3 text-[#9baab5]"/><select aria-label="Monitoring region" className="h-[37px] appearance-none rounded-lg border border-[#e3e8ec] bg-white py-2 pl-8 pr-8 text-[10px] font-medium text-[#7f919e]" value={region.id} onChange={event=>{setRegionId(event.target.value);setSelected(null);}}>{availableRegions.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select><ChevronDown size={10} className="pointer-events-none absolute right-3 top-3.5 text-[#a9b5be]"/></label>
             <button className="btn-secondary !h-[37px] !min-h-0 !px-3 !text-[10px]" onClick={openDates}><CalendarDays size={12} className="text-[#9cabb5]"/>{rangeLabel}<ChevronDown size={10} className="text-[#a9b5be]"/></button>
-            <label className="relative"><ListFilter size={13} className="pointer-events-none absolute left-3 top-3 text-[#9baab5]"/><select aria-label="Filter source type" className="h-[37px] appearance-none rounded-lg border border-[#e3e8ec] bg-white py-2 pl-8 pr-8 text-[10px] font-medium text-[#7f919e]" value={classKey} onChange={event=>setClassKey(event.target.value as ClassKey|'all')}><option value="all">All source types</option>{Object.entries(CLASSES).map(([key,value])=><option key={key} value={key}>{value.short}</option>)}</select><ChevronDown size={10} className="pointer-events-none absolute right-3 top-3.5 text-[#a9b5be]"/></label>
+            <label className="relative"><ListFilter size={13} className="pointer-events-none absolute left-3 top-3 text-[#9baab5]"/><select aria-label="Filter source type" className="h-[37px] appearance-none rounded-lg border border-[#e3e8ec] bg-white py-2 pl-8 pr-8 text-[10px] font-medium text-[#7f919e]" value={classKey} onChange={event=>setClassKey(event.target.value as ClassKey|'all')}>
+              <option value="all">All source types</option>
+              <optgroup label="Industrial">
+                {Object.entries(CLASSES).filter(([_, val]) => val.primary === 'industrial').map(([key, val]) => (
+                  <option key={key} value={key}>{val.short}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Non-Industrial">
+                {Object.entries(CLASSES).filter(([_, val]) => val.primary === 'non_industrial').map(([key, val]) => (
+                  <option key={key} value={key}>{val.short}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Uncertain">
+                {Object.entries(CLASSES).filter(([_, val]) => val.primary === 'uncertain').map(([key, val]) => (
+                  <option key={key} value={key}>{val.short}</option>
+                ))}
+              </optgroup>
+            </select><ChevronDown size={10} className="pointer-events-none absolute right-3 top-3.5 text-[#a9b5be]"/></label>
             <div className="ml-auto flex h-[37px] items-center rounded-lg border border-[#e2e8ec] bg-[#eef2f5] p-[3px] text-[10px]"><button onClick={()=>setDataMode('archive')} className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 ${mode==='archive'?'bg-white font-medium text-[#9c7e64] shadow-sm':'text-[#9fadb7]'}`}><History size={11}/>Historical</button><button onClick={()=>setDataMode('live')} className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 ${mode==='live'?'bg-white font-medium text-[#759584] shadow-sm':'text-[#9fadb7]'}`}><Radio size={11}/>Near-real-time</button></div>
           </div>
           <div className={`my-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3.5 py-2.5 text-[9px] ${mode==='archive'?'border-[#eee6da] bg-[#fcf8f1] text-[#b09775]':data?.availability==='ready'?'border-[#e0ebe5] bg-[#f3f8f5] text-[#87a593]':'border-[#eedad3] bg-[#fff5f2] text-[#c9622d]'}`}>

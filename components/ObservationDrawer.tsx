@@ -4,7 +4,7 @@ import { ArrowUpRight, Bookmark, Check, CheckCheck, ChevronRight, CircleHelp, Cl
 import { api, useApi } from '@/lib/api';
 import { CLASSES, coordinates, formatDate, formatNumber, formatTime, satelliteName } from '@/lib/constants';
 import type { Evidence, Review, ThermalEvent } from '@/lib/types';
-import { ClassBadge, ErrorState, ExternalLink, RiskBadge } from './ui';
+import { ClassBadge, ErrorState, ExternalLink, PrimaryBadge, RiskBadge } from './ui';
 
 export default function ObservationDrawer({ event, onClose, onReviewed, onEvidence, notify }: {event: ThermalEvent; onClose: () => void; onReviewed: () => void; onEvidence: (value: Evidence) => void; notify: (message: string, error?: boolean) => void}) {
   const [review, setReview] = useState<Review | null>(event.review || null);
@@ -55,7 +55,7 @@ export default function ObservationDrawer({ event, onClose, onReviewed, onEviden
     <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Observation investigation" className="flex h-full w-full max-w-[480px] flex-col bg-white shadow-2xl outline-none">
       <div className="flex h-[65px] shrink-0 items-center justify-between border-b border-[#e9edf0] px-6"><div className="flex items-center gap-2 text-xs font-semibold"><ScanLine size={16} className="text-[#d69364]" />Observation investigation</div><div className="flex gap-1"><button onClick={download} aria-label="Download observation evidence" title="Download real observation and evidence" className="icon-button"><FileDown size={16} /></button><button onClick={onClose} aria-label="Close observation" className="icon-button"><X size={19} /></button></div></div>
       <div className="scroll-thin flex-1 overflow-y-auto p-6">
-        <div className="flex items-center justify-between"><span className="section-label text-[#c1895f]">{event.mode === 'archive' ? 'Historical observation' : 'Near-real-time observation'}</span><ClassBadge classKey={event.prediction.classKey} compact /></div>
+        <div className="flex items-center justify-between"><span className="section-label text-[#c1895f]">{event.mode === 'archive' ? 'Historical observation' : 'Near-real-time observation'}</span><div className="flex items-center gap-1.5"><PrimaryBadge primaryClass={event.prediction.primaryClass} compact /><ClassBadge classKey={event.prediction.classKey} compact /></div></div>
         <h2 className="mt-3 font-display text-[21px] font-semibold tracking-tight">{coordinates(event.latitude, event.longitude, 4)}</h2>
         <p className="mt-2 text-[11px] text-[#85949e]">{formatDate(event.acquiredAt)} <span className="mx-1.5">·</span> {formatTime(event.acquiredAt)} UTC <span className="mx-1.5">·</span> {satelliteName(event.satellite)} ({event.daynight === 'D' ? 'Day' : 'Night'})</p>
         <p className="mt-1 font-mono text-[9px] text-[#acb4bb]">{event.id}</p>
@@ -83,14 +83,14 @@ export default function ObservationDrawer({ event, onClose, onReviewed, onEviden
         </section>
 
         <section className="mt-5 rounded-xl border border-[#e7ebee] p-4">
-          <div className="flex items-center justify-between"><span className="section-label text-[#94a0aa]">Model assessment</span><span className="rounded bg-[#fcf5ec] px-1.5 py-0.5 text-[8.5px] font-medium text-[#b07d39]">Provisional Classification</span></div>
+          <div className="flex items-center justify-between"><span className="section-label text-[#94a0aa]">Classification Assessment</span><PrimaryBadge primaryClass={event.prediction.primaryClass} /></div>
           <h3 className="mt-3 flex items-center gap-2 text-[13px] font-semibold" style={{color}}><span className="h-2 w-2 rounded-full" style={{background:color}} />{event.prediction.label}</h3>
-          <p className="mt-1.5 text-[9px] font-medium text-[#b07d39]">Requires Ground Verification · Not Ground-Confirmed</p>
-          {event.prediction.explanation && <p className="mt-2 text-[10px] leading-5 text-[#5e717e] bg-[#f8fafb] p-2.5 rounded border border-[#edf1f4]">{event.prediction.explanation}</p>}
+          <p className="mt-1.5 text-[9px] font-medium text-[#b07d39]">Provisional Satellite Detection · Requires Independent Ground Verification</p>
+          {event.prediction.explanation && <div className="mt-2.5 rounded border border-[#edf1f4] bg-[#f8fafb] p-3 text-[10px] leading-5 text-[#5e717e]"><div className="font-semibold text-[#455562] mb-1">Classification Reason & Evidence:</div><p>{event.prediction.explanation}</p></div>}
           {event.prediction.abstentionReason && <p className="mt-2 text-[10px] leading-5 text-[#a38569]">Model abstained: {event.prediction.abstentionReason}. No trusted source type is assigned.</p>}
           <div className="mt-4 space-y-2.5">{event.prediction.probabilities.map(item => <div key={item.key}><div className="mb-1 flex justify-between text-[9px]"><span className="text-[#8997a1]">{item.label}</span><span className="tabular font-medium text-[#62717d]">{(item.score * 100).toFixed(1)}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-[#f0f3f5]"><div className="h-full rounded-full" style={{width:`${item.score*100}%`,background:CLASSES[item.key as keyof typeof CLASSES]?.color || '#8e9ca6'}} /></div></div>)}</div>
           {!event.prediction.probabilities.length && <p className="mt-3 text-xs text-[#98a3ac]">No model output available. Scores have not been fabricated.</p>}
-          <p className="mt-4 border-t border-[#eff1f4] pt-3 text-[9px] leading-5 text-[#9aa5ae]">Uncalibrated source-type scores, not verified incident confidence. {event.prediction.featureMode || 'Model not available'}. Industrial-fire confirmation requires independent evidence.</p>
+          <p className="mt-4 border-t border-[#eff1f4] pt-3 text-[9px] leading-5 text-[#9aa5ae]"><strong>Important Safety Notice:</strong> FIRMS satellite detection alone must never be used to confirm an industrial explosion, blast, or accident. Uncalibrated source-type scores require ground verification.</p>
         </section>
 
         <section className="mt-5">

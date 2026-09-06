@@ -101,6 +101,12 @@ def predict(request: PredictionRequest):
         df[column] = pd.to_numeric(df[column], errors="coerce")
         if df[column].isna().any() or (df[column] < 0).any():
             raise HTTPException(422, "Precomputed history contains invalid values; recompute from genuine past observations.")
+    # Spatial industrial context lookup:
+    # If industrial distance is not provided on the incoming request, enrich using the genuine offline index
+    from ml.industrial_index import enrich_observations_batch
+    if "industrial_distance_m" not in df.columns or df["industrial_distance_m"].isna().all():
+        df = enrich_observations_batch(df)
+
     x = feature_matrix(df, card["feature_names"])
     with lock:
         probabilities = model.predict_proba(x)
@@ -110,7 +116,7 @@ def predict(request: PredictionRequest):
     for i, (_, row) in enumerate(df.iterrows()):
         context_required = [c for c in card["feature_names"] if c in CONTEXT_FEATURES]
         if context_required and x.iloc[i][context_required].isna().any():
-            results.append({"id": str(row.get("id", row.name)), "classKey": "unclassified", "label": "Context required for fused model",
+            results.append({"id": str(row.get("id", row.name)), "classKey": "unclassified", "primaryClass": "uncertain", "label": "Context required for fused model",
                             "score": None, "modelId": card["model_id"], "featureMode": card["feature_mode"], "probabilities": [],
                             "abstentionReason": "Required measured Sentinel/OSM context is missing. Fetch evidence before scoring this fused model.",
                             "history": {"detections": int(row["prior_detections_30d"]), "activeDays": int(row["prior_active_days_30d"]), "coverageDays": round(float(row["history_coverage_days"]), 2)}})
@@ -126,29 +132,41 @@ def predict(request: PredictionRequest):
         proba_dict = {item["key"]: float(values[j]) for j, item in enumerate(card["classes"])}
 
         # Extract contextual factors if available on row
-        dist_m = row.get("industrial_distance_m") or row.get("industrial_distance_capped_m")
-        ndvi_val = row.get("ndvi")
-        ndbi_val = row.get("ndbi")
-        power_nearby = bool(row.get("power_plant_nearby"))
-        landuse_ind = bool(row.get("industrial_landuse_nearby"))
+        dist_m = row.get("industrial_distance_m")
+        if dist_m is None or pd.isna(dist_m):
+            dist_m = row.get("industrial_distance_capped_m")
+        dist_m_val = float(dist_m) if dist_m is not None and not pd.isna(dist_m) else None
+        ndvi_val = float(row.get("ndvi")) if pd.notna(row.get("ndvi")) else None
+        ndbi_val = float(row.get("ndbi")) if pd.notna(row.get("ndbi")) else None
+        power_nearby = bool(row.get("power_plant_nearby", False))
+        landuse_ind = bool(row.get("industrial_landuse_nearby", False))
+        refinery_or_flare = bool(row.get("refinery_or_flare_nearby", False))
+        facility_name = row.get("industrial_site_name") or row.get("nearest_facility_name")
+        context_status = str(row.get("context_status", "ready"))
         frp_val = float(row.get("frp", 0))
         bright_val = float(row.get("bright_ti4", 300))
+        bright_bg = float(row.get("bright_ti5", 290))
+        t_delta = float(row.get("temperature_delta", bright_val - bright_bg))
         active_days = float(row.get("prior_active_days_30d", 0))
         conf_str = str(row.get("confidence", "n"))
 
-        class_key, label, explanation = derive_sih_classification(
+        class_key, label, explanation, primary_class = derive_sih_classification(
             raw_class=raw_key, proba_dict=proba_dict, frp=frp_val, brightness=bright_val,
-            active_days=active_days, dist_m=dist_m, ndvi=ndvi_val, ndbi=ndbi_val,
-            power_nearby=power_nearby, landuse_ind=landuse_ind, model_score=score
+            active_days=active_days, dist_m=dist_m_val, ndvi=ndvi_val, ndbi=ndbi_val,
+            power_nearby=power_nearby, landuse_ind=landuse_ind,
+            refinery_or_flare_nearby=refinery_or_flare, facility_name=facility_name,
+            context_status=context_status, model_score=score,
+            temperature_delta=t_delta
         )
 
         risk = calculate_risk(
             frp=frp_val, brightness=bright_val, confidence=conf_str, category=class_key,
-            dist_m=dist_m, power_nearby=power_nearby, model_score=score
+            dist_m=dist_m_val, power_nearby=power_nearby, model_score=score
         )
 
         results.append({
             "id": str(row.get("id", row.name)),
+            "primaryClass": primary_class,
             "classKey": class_key,
             "rawClassKey": definition["key"],
             "label": label,

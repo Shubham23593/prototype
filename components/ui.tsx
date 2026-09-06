@@ -1,12 +1,18 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { AlertCircle, ArrowUpRight, Check, LoaderCircle, Satellite, X } from 'lucide-react';
-import { CLASSES } from '@/lib/constants';
-import type { ClassKey, SourceState } from '@/lib/types';
+import { Satellite, LoaderCircle, AlertCircle, ArrowUpRight, X, Check } from 'lucide-react';
+import { CLASSES, PRIMARY_CLASSES } from '@/lib/constants';
+import type { ClassKey, PrimaryClass, SourceState } from '@/lib/types';
 
-export function ClassBadge({ classKey, compact = false }: {classKey: ClassKey; compact?: boolean}) {
+export function ClassBadge({ classKey, primaryClass, compact = false }: {classKey: ClassKey; primaryClass?: PrimaryClass; compact?: boolean}) {
   const config = CLASSES[classKey] || CLASSES.uncertain;
-  return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 font-medium ${compact ? 'text-[10px]' : 'text-[11px]'}`} style={{ color: config.color, background: config.bg }}><span className="h-1.5 w-1.5 rounded-full" style={{background: config.color}} />{config.short}</span>;
+  return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 font-medium ${compact ? 'text-[9.5px]' : 'text-[10.5px]'}`} style={{ color: config.color, background: config.bg }}><span className="h-1.5 w-1.5 rounded-full" style={{background: config.color}} />{config.short}</span>;
+}
+
+export function PrimaryBadge({ primaryClass, compact = false }: {primaryClass?: PrimaryClass; compact?: boolean}) {
+  const p = primaryClass || 'uncertain';
+  const config = PRIMARY_CLASSES[p] || PRIMARY_CLASSES.uncertain;
+  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 font-semibold uppercase tracking-wider ${compact ? 'text-[8px]' : 'text-[9px]'}`} style={{ color: config.color, background: config.bg }}>{config.label}</span>;
 }
 
 export function RiskBadge({ level, compact = false }: {level?: 'low' | 'medium' | 'high' | 'critical'; compact?: boolean}) {
