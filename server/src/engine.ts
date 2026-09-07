@@ -6,19 +6,33 @@ import type { ClassKey, DataMode, Evidence, Overview, Prediction, Region, Source
 import { FirmsFeed, parseFirmsCsv, type Observation } from './firms';
 import { Store } from './store';
 
-export async function mlRequest<T>(route: string, body?: unknown, timeout = 45000): Promise<T> {
+export async function mlRequest<T>(route: string, body?: unknown, timeout = 45000, retries = 1): Promise<T> {
   const headers: Record<string,string> = body === undefined ? {} : {'Content-Type': 'application/json'};
   const serviceKey = process.env.INTERNAL_SERVICE_KEY || process.env.ADMIN_API_KEY;
   if (serviceKey) headers['X-Service-Key'] = serviceKey;
-  const response = await fetch(`${process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000'}${route}`, {
-    method: body === undefined ? 'GET' : 'POST', headers,
-    body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeout),
-  });
-  let result;
-  try { result = await response.json(); }
-  catch { throw new Error(`ML service returned a non-JSON response (HTTP ${response.status}). Inspect service health; no scores were substituted.`); }
-  if (!response.ok) throw Object.assign(new Error(typeof result.detail === 'string' ? result.detail : 'ML request failed validation'), { status: response.status });
-  return result as T;
+  const url = `${process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000'}${route}`;
+  try {
+    const response = await fetch(url, {
+      method: body === undefined ? 'GET' : 'POST', headers,
+      body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeout),
+    });
+    if ((response.status === 502 || response.status === 503) && retries > 0) {
+      // Cloud services like Render spin down when idle; wait for cold start and retry
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      return mlRequest<T>(route, body, timeout, retries - 1);
+    }
+    let result;
+    try { result = await response.json(); }
+    catch { throw new Error(`ML service returned a non-JSON response (HTTP ${response.status}). Inspect service health; no scores were substituted.`); }
+    if (!response.ok) throw Object.assign(new Error(typeof result.detail === 'string' ? result.detail : 'ML request failed validation'), { status: response.status });
+    return result as T;
+  } catch (error) {
+    if (retries > 0 && error instanceof Error && (error.name === 'TimeoutError' || error.message.includes('fetch failed'))) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      return mlRequest<T>(route, body, timeout, retries - 1);
+    }
+    throw error;
+  }
 }
 export interface Filters { mode: DataMode; region: string; window: '24h' | '48h' | '7d'; classKey: ClassKey | 'all'; from?: string; to?: string; q?: string }
 
@@ -102,7 +116,7 @@ export class Engine {
     if (!force && this.modelState.available && Date.now() - this.lastModelCheck < 15000) return;
     this.lastModelCheck = Date.now();
     try {
-      const health = await mlRequest<{status: string; model_id: string; feature_mode: string; trained_at: string; message?: string}>('/health', undefined, 8000);
+      const health = await mlRequest<{status: string; model_id: string; feature_mode: string; trained_at: string; message?: string}>('/health', undefined, 35000);
       if (health.status !== 'ready') throw new Error(health.message || 'No trained model');
       const nextStamp = `${health.model_id}:${health.trained_at}`;
       if (nextStamp !== this.stamp) { this.predictions.clear(); this.stamp = nextStamp; }

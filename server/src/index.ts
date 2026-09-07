@@ -187,10 +187,15 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 2500));
     }
   })().catch(error => console.error('Source checks could not finish:', error.message));
-  const pollMinutes = Math.max(5, Number(process.env.POLL_INTERVAL_MINUTES) || 15);
+  const pollMinutes = Math.max(5, Number(process.env.POLL_INTERVAL_MINUTES) || 10);
   const poller = setInterval(() => engine.checkSources().catch(() => {}), pollMinutes * 60000);
   poller.unref();
-  process.on('SIGTERM', () => { clearInterval(poller); server.close(() => process.exit(0)); });
+  // Keep-alive ping for ML service every 9 minutes to prevent idle spin-down on Render free tier
+  const mlKeepAlive = setInterval(() => {
+    fetch(`${process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000'}/health`, { signal: AbortSignal.timeout(15000) }).catch(() => {});
+  }, 9 * 60000);
+  mlKeepAlive.unref();
+  process.on('SIGTERM', () => { clearInterval(poller); clearInterval(mlKeepAlive); server.close(() => process.exit(0)); });
 }
 if (process.env.THERMOSCAN_TEST !== '1') main().catch(error => { console.error('ThermoScan startup failed:', error.message); process.exit(1); });
 export { app, engine };
