@@ -6,6 +6,7 @@ import type { ClassKey, DataMode, Evidence, Overview, Prediction, Region, Source
 import { FirmsFeed, parseFirmsCsv, type Observation } from './firms';
 import { Store } from './store';
 
+
 export async function mlRequest<T>(route: string, body?: unknown, timeout = 45000, retries = 1): Promise<T> {
   const headers: Record<string,string> = body === undefined ? {} : {'Content-Type': 'application/json'};
   const serviceKey = process.env.INTERNAL_SERVICE_KEY || process.env.ADMIN_API_KEY;
