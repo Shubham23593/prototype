@@ -260,25 +260,10 @@ export default function ThermalMap({ events, region, selected, onSelect, fullScr
           <p className="mt-2 border-t border-[#41525e] pt-3 text-[10px] leading-relaxed text-[#8fabb9]">OSM infrastructure appears after a successful evidence query. Satellite imagery provided by Esri.</p>
         </div>}
       </div>
-      <div className="hidden rounded-md border border-[#53656e50] bg-[#253640c9] px-2.5 py-2 text-[10px] text-[#a9bac5] sm:block">VIIRS <span className="mx-1 text-[#526c7b]">/</span> 375 m nominal</div>
     </div>
     <div className="absolute right-4 top-4 z-[1000] flex gap-1.5">
       <button title="Reset to selected region" aria-label="Reset map view" onClick={() => setReset(value => value + 1)} className="rounded-md border border-[#53656e80] bg-[#253640ed] p-2 text-[#c6d4dc]"><Crosshair size={15} /></button>
       <button title={fullScreen ? 'Close expanded map' : 'Expand map'} aria-label={fullScreen ? 'Close expanded map' : 'Expand map'} onClick={onFullScreen} className="rounded-md border border-[#53656e80] bg-[#253640ed] p-2 text-[#c6d4dc]">{fullScreen ? <X size={15} /> : <Maximize2 size={15} />}</button>
-    </div>
-    <div className="absolute bottom-8 left-4 z-[900] flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-[#52637050] bg-[#1c2c35db] px-3 py-2 text-[9px] font-medium text-[#b9c9d2] backdrop-blur-sm">
-      {events.some(e => e.risk?.level === 'critical' || e.risk?.level === 'high') && (
-        <span className="flex items-center gap-1.5 rounded-full bg-[#ef444426] border border-[#ef444466] px-2 py-0.5 font-bold text-[#fca5a5]">
-          <span className="h-2 w-2 rounded-full bg-[#ef4444] animate-pulse" />
-          {events.filter(e => e.risk?.level === 'critical' || e.risk?.level === 'high').length} High/Critical Alerts
-        </span>
-      )}
-      {(['industrial', 'forest', 'agriculture', 'persistent', 'uncertain'] as const).map(key => (
-        <span key={key} className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full" style={{ background: CLASSES[key]?.color || '#9ca3af' }} />
-          {CLASSES[key]?.label || key}
-        </span>
-      ))}
     </div>
     <div className="pointer-events-none absolute bottom-1 left-3 z-[900] max-w-[70%] text-[8px] text-[#8ea2b0]">{base === 'satellite' ? 'Esri World Imagery' : base === 'default' ? '© OpenStreetMap contributors' : 'Natural Earth · public domain'} <span className="hidden md:inline"> · {pointer}</span></div>
     {mapError && <div className="absolute top-16 left-4 z-[900] rounded bg-[#392e2b] px-3 py-2 text-[10px] text-orange-200">Reference geometry unavailable. Coordinate markers remain real.</div>}

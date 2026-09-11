@@ -86,12 +86,45 @@ export default function OverviewView({ data, loading, region, selected, onSelect
           <div className="flex items-center gap-2.5"><Focus className="text-[#819099]" size={17} strokeWidth={1.6} /><div><h2 className="text-[12px] font-semibold text-[#35414a]">Geospatial overview</h2><p className="mt-0.5 text-[9px] text-[#9aa3aa]">{region.name} <span className="mx-1">·</span> Click an observation to investigate</p></div></div>
           <span className="hidden items-center gap-1.5 rounded-full border border-[#e6e9ec] bg-[#f8f9fa] px-2.5 py-1 text-[9px] text-[#84919a] sm:inline-flex"><span className={`h-1 w-1 rounded-full ${data?.model.available ? 'bg-[#74a18b]' : 'bg-[#c7a67b]'}`} />{data?.model.available ? 'XGBoost inference' : data ? 'Model unavailable' : 'Model checking'}</span>
         </div>
-        <div className="relative" style={{height: fullScreen ? 'calc(100% - 97px)' : 450}}>
+        <div className="relative" style={{height: fullScreen ? 'calc(100% - 105px)' : 530}}>
           <ThermalMap events={data?.events || []} selected={selected} onSelect={onSelect} region={region} fullScreen={fullScreen} onFullScreen={onFullScreen} infrastructure={evidence?.osm.features} />
           {loading && !data && <div className="absolute inset-0 z-[1100] flex flex-col items-center justify-center gap-3 bg-[#1b2933ab] text-xs text-[#cfdae1]"><LoaderCircle className="animate-spin text-[#eea075]" size={24} /><span>Reading real observations & running inference…</span></div>}
           {data?.availability === 'unavailable' && <div className="absolute bottom-24 left-1/2 z-[1100] w-[85%] max-w-md -translate-x-1/2 rounded-xl border border-[#506575] bg-[#253640ed] p-5 text-center text-xs text-[#ccd7df]"><Radio size={22} className="mx-auto mb-3 text-[#dba174]" /><div className="font-medium text-white">Live source unavailable</div><p className="mt-2 text-[11px] leading-5 text-[#afbdc7]">No live data has been substituted. Check the connection or switch to the clearly labelled historical workspace.</p><button onClick={onSources} className="mt-3 inline-flex items-center gap-1 text-[11px] text-[#f0b286]">View source status<ArrowRight size={12} /></button></div>}
         </div>
-        <div className="flex h-[34px] items-center justify-between gap-2 bg-white px-4 text-[9px] text-[#8a98a2]"><span className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-[#ee9b63]" />{data ? `${formatNumber(data.events.length)} ${data.truncated ? `highest-FRP points of ${formatNumber(data.total)}` : 'observations'} mapped` : 'Waiting for observations'}</span><span className="hidden sm:block">{data?.mode === 'archive' ? 'HISTORICAL OBSERVATIONS' : 'NEAR-REAL-TIME SOURCE'} <span className="mx-1.5 text-[#d1d7dc]">|</span> WGS 84</span></div>
+        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3 border-t border-[#edf0f2] bg-white px-4 py-2.5 text-[9.5px] text-[#64748b]">
+          <span className="flex items-center gap-1.5 shrink-0 font-medium text-[#475569]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#ee9b63]" />
+            {data ? `${formatNumber(data.events.length)} ${data.truncated ? `highest-FRP points of ${formatNumber(data.total)}` : 'observations'} mapped` : 'Waiting for observations'}
+          </span>
+
+          {/* Map legend categories cleanly integrated into panel footer */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9.5px]">
+            <span className="flex items-center gap-1 text-[#334155]">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: '#dc2626' }} />
+              Potential Industrial Fire — Requires Ground Verification
+            </span>
+            <span className="flex items-center gap-1 text-[#334155]">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: '#16a34a' }} />
+              Forest / Natural Fire
+            </span>
+            <span className="flex items-center gap-1 text-[#334155]">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: '#d97706' }} />
+              Agricultural Burning
+            </span>
+            <span className="flex items-center gap-1 text-[#334155]">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: '#7c3aed' }} />
+              Persistent Thermal Source
+            </span>
+            <span className="flex items-center gap-1 text-[#334155]">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: '#64748b' }} />
+              Other / Uncertain
+            </span>
+          </div>
+
+          <span className="hidden xl:block text-[9px] uppercase tracking-wider text-[#94a3b8] shrink-0">
+            {data?.mode === 'archive' ? 'HISTORICAL OBSERVATIONS' : 'NEAR-REAL-TIME SOURCE'} <span className="mx-1.5 text-[#d1d7dc]">|</span> WGS 84
+          </span>
+        </div>
       </section>
       <section className="panel flex min-w-0 flex-col overflow-hidden">
         <div className="flex h-[62px] shrink-0 items-center justify-between px-4"><h2 className="text-[12px] font-semibold text-[#35414a]">Observation feed</h2><span className="tabular rounded-md bg-[#f3f5f7] px-2 py-1 text-[10px] text-[#82919d]">{available ? formatNumber(data?.total || 0) : '—'}</span></div>

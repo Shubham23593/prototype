@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { ArrowRight, Bookmark, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Download, FileText, Filter, Info, MapPin, Search, Trash2, X } from 'lucide-react';
+import { ArrowRight, Bookmark, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Database, Download, FileText, Filter, Info, MapPin, Search, ShieldAlert, Trash2, X } from 'lucide-react';
 import { api, useApi } from '@/lib/api';
 import { coordinates, formatDate, formatNumber, formatTime, satelliteName } from '@/lib/constants';
 import type { SourceStatus, ThermalEvent } from '@/lib/types';
@@ -110,16 +110,37 @@ function ObservationTable({
                       <MapPin size={15} strokeWidth={1.5} />
                     </span>
                     <span className="min-w-0">
-                      <span className="tabular block text-xs font-semibold text-[#1e293b]">
-                        {coordinates(event.latitude, event.longitude, 3)}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="tabular block text-xs font-semibold text-[#1e293b]">
+                          {coordinates(event.latitude, event.longitude, 3)}
+                        </span>
+                        {/* Feed origin badge */}
+                        {event.mode === 'live' ? (
+                          <span className="inline-flex items-center gap-1 rounded bg-[#ecfdf5] border border-[#a7f3d0] px-1.5 py-0.2 text-[8.5px] font-bold uppercase tracking-wider text-[#065f46]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#10b981] animate-pulse" />
+                            Live Feed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.2 text-[8.5px] font-semibold uppercase tracking-wider text-[#475569]">
+                            Historical
+                          </span>
+                        )}
+                      </div>
                       <span className="mt-0.5 block font-mono text-[10px] text-[#64748b]">{event.id}</span>
                       {watchlist && event.review?.note && (
                         <span
-                          className="mt-1.5 flex max-w-[230px] items-center gap-1 rounded border border-[#e2e8f0] bg-[#f8fafc] px-2 py-0.5 text-[10px] text-[#475569]"
+                          className={`mt-1.5 flex max-w-[270px] items-center gap-1.5 rounded border px-2 py-0.5 text-[10px] ${
+                            event.review.note.includes('Auto-flagged')
+                              ? 'border-[#fecaca] bg-[#fef2f2] text-[#991b1b]'
+                              : 'border-[#e2e8f0] bg-[#f8fafc] text-[#475569]'
+                          }`}
                           title={event.review.note}
                         >
-                          <FileText size={10} className="shrink-0 text-[#94a3b8]" />
+                          {event.review.note.includes('Auto-flagged') ? (
+                            <ShieldAlert size={10} className="shrink-0 text-[#dc2626]" />
+                          ) : (
+                            <FileText size={10} className="shrink-0 text-[#94a3b8]" />
+                          )}
                           <span className="truncate italic">"{event.review.note}"</span>
                         </span>
                       )}
@@ -355,8 +376,23 @@ export function WatchlistView({
 }) {
   const {data, error, loading, reload} = useApi<{events: ThermalEvent[]; storage: SourceStatus}>('/api/watchlist', refresh);
   const [tab, setTab] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'live' | 'archive' | 'alerts'>('all');
   const [removing, setRemoving] = useState<string | null>(null);
-  const events = data?.events.filter(event => tab === 'all' || event.review?.state === tab) || [];
+
+  const rawEvents = data?.events || [];
+  const liveCount = rawEvents.filter(e => e.mode === 'live').length;
+  const archiveCount = rawEvents.filter(e => e.mode === 'archive').length;
+  const alertCount = rawEvents.filter(e => e.review?.note?.includes('Auto-flagged')).length;
+  const manualCount = rawEvents.length - alertCount;
+
+  const events = rawEvents.filter(event => {
+    const matchesState = tab === 'all' || event.review?.state === tab;
+    if (!matchesState) return false;
+    if (sourceFilter === 'live') return event.mode === 'live';
+    if (sourceFilter === 'archive') return event.mode === 'archive';
+    if (sourceFilter === 'alerts') return Boolean(event.review?.note?.includes('Auto-flagged'));
+    return true;
+  });
 
   async function remove(event: ThermalEvent) {
     if (removing) return;
@@ -389,49 +425,115 @@ export function WatchlistView({
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-1 text-xs font-bold text-[#166534]">
               <span className="h-2 w-2 rounded-full bg-[#16a34a]" />
-              {data?.events.length ?? 0} Saved Observations
+              {rawEvents.length} Queued Observations
             </span>
           </div>
         </div>
 
-        <div className="p-4 bg-[#f8fafc] border-b border-[#e2e8ec] flex items-start gap-3">
-          <Bookmark size={17} className="mt-0.5 shrink-0 text-[#ea580c]" />
-          <p className="text-xs leading-relaxed text-[#475569]">
-            Your analyst review queue contains only observations you saved. High FRP is a transparent prioritization rule, not a verified emergency. No SMS, email, or emergency-service notifications are sent by this prototype.
-          </p>
+        <div className="p-4 bg-[#f8fafc] border-b border-[#e2e8ec] flex flex-col gap-3">
+          <div className="flex items-start gap-3">
+            <Bookmark size={17} className="mt-0.5 shrink-0 text-[#ea580c]" />
+            <div>
+              <div className="text-xs font-semibold text-[#1e293b]">
+                Analyst Ground Verification & Triage Queue
+              </div>
+              <p className="text-xs leading-relaxed text-[#475569] mt-0.5">
+                This queue prioritizes hotspots requiring investigation. It centralizes 
+                <strong className="text-[#0f172a] font-semibold"> automated High & Critical priority alerts</strong> flagged by the AI risk engine from active satellite monitoring sessions (Live NRT and Historical), alongside <strong className="text-[#0f172a] font-semibold">observations bookmarked by analysts</strong> for ground triage.
+              </p>
+            </div>
+          </div>
+
+          {/* Explicit Source Breakdown */}
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#edf0f2] text-xs">
+            <span className="font-semibold text-[#475569] text-[11px] uppercase tracking-wider">
+              Queue Breakdown:
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-[#ecfdf5] border border-[#a7f3d0] px-2.5 py-1 font-semibold text-[#065f46]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#10b981] animate-pulse" />
+              Live FIRMS Feed: {liveCount}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-[#f1f5f9] border border-[#cbd5e1] px-2.5 py-1 font-semibold text-[#334155]">
+              <Database size={11} className="text-[#64748b]" />
+              Historical Archive: {archiveCount}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-[#fef2f2] border border-[#fecaca] px-2.5 py-1 font-semibold text-[#991b1b]">
+              <ShieldAlert size={11} className="text-[#dc2626]" />
+              Auto-Flagged Alerts: {alertCount}
+            </span>
+            {manualCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-[#eff6ff] border border-[#bfdbfe] px-2.5 py-1 font-semibold text-[#1e40af]">
+                <Bookmark size={11} className="text-[#3b82f6]" />
+                Analyst Saved: {manualCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
       <section className="panel overflow-hidden">
         {/* Controls Bar: Tabs & Storage Status */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-[#edf0f2] bg-[#fbfcfd]">
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748b]">
-              Filter Queue:
-            </span>
-            <div className="flex h-[36px] items-center rounded-lg border border-[#e2e8ec] bg-[#f1f5f9] p-[3px] text-xs">
-              {[
-                ['all', 'All Saved', data?.events.length ?? 0],
-                ['watching', 'Watching', data?.events.filter(e => e.review?.state === 'watching').length ?? 0],
-                ['reviewed', 'Reviewed', data?.events.filter(e => e.review?.state === 'reviewed').length ?? 0],
-              ].map(([value, label, count]) => (
-                <button
-                  key={value}
-                  onClick={() => setTab(value as string)}
-                  className={`flex h-full items-center gap-1.5 px-3 rounded-[5px] font-medium transition ${
-                    tab === value
-                      ? 'bg-white font-semibold text-[#0f172a] shadow-sm'
-                      : 'text-[#64748b] hover:text-[#0f172a]'
-                  }`}
-                >
-                  <span>{label}</span>
-                  <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                    tab === value ? 'bg-[#f1f5f9] text-[#0f172a]' : 'bg-[#e2e8f0] text-[#64748b]'
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              ))}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748b]">
+                Status:
+              </span>
+              <div className="flex h-[36px] items-center rounded-lg border border-[#e2e8ec] bg-[#f1f5f9] p-[3px] text-xs">
+                {[
+                  ['all', 'All Statuses', rawEvents.length],
+                  ['watching', 'Watching', rawEvents.filter(e => e.review?.state === 'watching').length],
+                  ['reviewed', 'Reviewed', rawEvents.filter(e => e.review?.state === 'reviewed').length],
+                ].map(([value, label, count]) => (
+                  <button
+                    key={value}
+                    onClick={() => setTab(value as string)}
+                    className={`flex h-full items-center gap-1.5 px-3 rounded-[5px] font-medium transition ${
+                      tab === value
+                        ? 'bg-white font-semibold text-[#0f172a] shadow-sm'
+                        : 'text-[#64748b] hover:text-[#0f172a]'
+                    }`}
+                  >
+                    <span>{label}</span>
+                    <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                      tab === value ? 'bg-[#f1f5f9] text-[#0f172a]' : 'bg-[#e2e8f0] text-[#64748b]'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748b]">
+                Source:
+              </span>
+              <div className="flex h-[36px] items-center rounded-lg border border-[#e2e8ec] bg-[#f1f5f9] p-[3px] text-xs">
+                {[
+                  ['all', 'All Sources', rawEvents.length],
+                  ['live', 'Live Feed', liveCount],
+                  ['archive', 'Historical', archiveCount],
+                  ['alerts', 'Auto-Alerts', alertCount],
+                ].map(([value, label, count]) => (
+                  <button
+                    key={value}
+                    onClick={() => setSourceFilter(value as 'all' | 'live' | 'archive' | 'alerts')}
+                    className={`flex h-full items-center gap-1.5 px-3 rounded-[5px] font-medium transition ${
+                      sourceFilter === value
+                        ? 'bg-white font-semibold text-[#0f172a] shadow-sm'
+                        : 'text-[#64748b] hover:text-[#0f172a]'
+                    }`}
+                  >
+                    <span>{label}</span>
+                    <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                      sourceFilter === value ? 'bg-[#f1f5f9] text-[#0f172a]' : 'bg-[#e2e8f0] text-[#64748b]'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

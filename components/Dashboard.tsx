@@ -16,7 +16,7 @@ import { ErrorState, Modal, Toast } from './ui';
 const PAGES: Record<Page,{label:string;title:string;description:string;icon:React.ReactNode}> = {
   overview:{label:'Overview',title:'Thermal intelligence',description:'From satellite signals to a clearer picture. All your thermal insights, in one place.',icon:<LayoutDashboard size={17} strokeWidth={1.65}/>},
   observations:{label:'Observations',title:'Observation catalog',description:'Explore genuine satellite detections, provisional source types, and original measurements.',icon:<ScanLine size={17} strokeWidth={1.65}/>},
-  watchlist:{label:'Review queue',title:'A closer look, where it matters.',description:'Your saved observations and analyst notes. No pre-filled incidents or simulated alerts.',icon:<Bookmark size={17} strokeWidth={1.65}/>},
+  watchlist:{label:'Review queue',title:'A closer look, where it matters.',description:'Ground verification queue for live alerts, high-priority hotspots, and analyst saved observations.',icon:<Bookmark size={17} strokeWidth={1.65}/>},
   history:{label:'Historical data',title:'Built on real observations.',description:'Trace every record to its source. Explore the archive and bring your own training data.',icon:<Database size={17} strokeWidth={1.65}/>},
   model:{label:'Model lab',title:'Understand the intelligence.',description:'A working XGBoost model, reproducible training, and evaluation without the inflated claims.',icon:<BrainCircuit size={17} strokeWidth={1.65}/>},
   sources:{label:'Data sources',title:'Connected to the source.',description:'Inspect genuine API connections, data provenance, and the limits of each signal.',icon:<Network size={17} strokeWidth={1.65}/>},
