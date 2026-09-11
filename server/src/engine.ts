@@ -226,9 +226,6 @@ export class Engine {
     const region: Region = selectedRegion || availableRegions[0] || REGIONS[0];
     const [west, south, east, north] = region.bbox;
 
-    const regionalData = data.filter(({ event }) => event.latitude >= south && event.latitude <= north && event.longitude >= west && event.longitude <= east);
-
-    await this.classify(regionalData, filters.mode === 'archive');
     let availableFrom: string | null = null, availableTo: string | null = null;
     for (const item of data) {
       const time = item.event.acquiredAt;
@@ -269,8 +266,21 @@ export class Engine {
       }
     }
 
-    let events = data.filter(({ event }) => event.latitude >= south && event.latitude <= north && event.longitude >= west && event.longitude <= east
-      && Date.parse(event.acquiredAt) >= start && Date.parse(event.acquiredAt) <= end).map(item => this.decorate(item));
+    const regionalData = data.filter(({ event }) => event.latitude >= south && event.latitude <= north && event.longitude >= west && event.longitude <= east);
+    const windowData = regionalData.filter(({ event }) => {
+      const t = Date.parse(event.acquiredAt);
+      return t >= start && t <= end;
+    });
+
+    // Fast path: classify what the user needs immediately
+    await this.classify(windowData.length ? windowData : regionalData, filters.mode === 'archive');
+
+    // Background path: warm up the rest of regional observations asynchronously without delaying user response
+    if (regionalData.length > windowData.length && windowData.length > 0) {
+      this.classify(regionalData, filters.mode === 'archive').catch(() => {});
+    }
+
+    let events = windowData.map(item => this.decorate(item));
 
     if (filters.classKey !== 'all') {
       if (filters.classKey === 'all_industrial' || filters.classKey === 'industrial_all') {

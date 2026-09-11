@@ -112,10 +112,11 @@ def predict(request: PredictionRequest):
     results = []
     threshold = card["abstention_threshold"]
     report = card["metrics"]["spatial_temporal"]["per_class"]
-    for i, (_, row) in enumerate(df.iterrows()):
+    records = df.to_dict(orient="records")
+    for i, row in enumerate(records):
         context_required = [c for c in card["feature_names"] if c in CONTEXT_FEATURES]
         if context_required and x.iloc[i][context_required].isna().any():
-            results.append({"id": str(row.get("id", row.name)), "classKey": "unclassified", "primaryClass": "uncertain", "label": "Context required for fused model",
+            results.append({"id": str(row.get("id", i)), "classKey": "unclassified", "primaryClass": "uncertain", "label": "Context required for fused model",
                             "score": None, "modelId": card["model_id"], "featureMode": card["feature_mode"], "probabilities": [],
                             "abstentionReason": "Required measured Sentinel/OSM context is missing. Fetch evidence before scoring this fused model.",
                             "history": {"detections": int(row["prior_detections_30d"]), "activeDays": int(row["prior_active_days_30d"]), "coverageDays": round(float(row["history_coverage_days"]), 2)}})
@@ -178,7 +179,7 @@ def predict(request: PredictionRequest):
         )
 
         results.append({
-            "id": str(row.get("id", row.name)),
+            "id": str(row.get("id", i)),
             "primaryClass": primary_class,
             "classKey": class_key,
             "rawClassKey": definition["key"],

@@ -27,7 +27,6 @@ export function useApi<T>(url: string | null, refresh = 0, pollMs = 0) {
   useEffect(() => {
     if (!url) { setLoading(false); return; }
     const controller = new AbortController();
-    if (previousUrl.current !== url) setData(undefined);
     previousUrl.current = url;
     setLoading(true); setError(null);
     api<T>(url, { signal: controller.signal }).then(result => { setData(result); setLoading(false); }).catch(error => {

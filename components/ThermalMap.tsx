@@ -57,16 +57,12 @@ function ObservationLayer({ events, onSelect, visible, scaled }: {events: Therma
         fillColor: color,
         fillOpacity: .85
       });
-      const tip = document.createElement('div');
-      const title = document.createElement('div');
-      title.textContent = coordinates(event.latitude, event.longitude);
-      title.style.fontWeight = '600';
-      const description = document.createElement('div');
-      description.textContent = `${event.frp.toFixed(1)} MW · ${CLASSES[event.prediction.classKey]?.short || event.prediction.classKey}`;
-      description.style.color = '#acbcc7';
-      description.style.marginTop = '3px';
-      tip.append(title, description);
-      marker.bindTooltip(tip, { direction: 'top', offset: [0, -5] });
+      const coordsText = coordinates(event.latitude, event.longitude);
+      const classText = CLASSES[event.prediction.classKey]?.short || event.prediction.classKey;
+      marker.bindTooltip(
+        `<div style="font-weight:600">${coordsText}</div><div style="color:#acbcc7;margin-top:3px">${event.frp.toFixed(1)} MW · ${classText}</div>`,
+        { direction: 'top', offset: [0, -5] }
+      );
       marker.on('click', () => click.current(event));
       marker.addTo(layer);
     }
@@ -78,7 +74,7 @@ function ObservationLayer({ events, onSelect, visible, scaled }: {events: Therma
       const coreColor = isCritical ? '#dc2626' : '#ea580c';
       const baseRadius = scaled ? Math.min(6.5, 2.8 + Math.sqrt(event.frp) * .22) : 4.5;
 
-      // Outer glowing halo
+      // Outer glowing halo (non-interactive so it doesn't double-bind events)
       const halo = L.circleMarker([event.latitude, event.longitude], {
         renderer,
         radius: baseRadius + 6,
@@ -88,6 +84,7 @@ function ObservationLayer({ events, onSelect, visible, scaled }: {events: Therma
         fillColor: haloColor,
         fillOpacity: 0.28,
         dashArray: isCritical ? '5, 3' : undefined,
+        interactive: false,
       });
 
       // Core alert marker with white border
@@ -101,44 +98,16 @@ function ObservationLayer({ events, onSelect, visible, scaled }: {events: Therma
         fillOpacity: 0.95,
       });
 
-      const tip = document.createElement('div');
-      tip.style.minWidth = '180px';
-      tip.style.padding = '2px';
-
-      const badge = document.createElement('div');
-      badge.textContent = isCritical ? 'CRITICAL PRIORITY ALERT' : 'HIGH PRIORITY ALERT';
-      badge.style.fontWeight = '800';
-      badge.style.fontSize = '10px';
-      badge.style.letterSpacing = '0.04em';
-      badge.style.color = haloColor;
-      badge.style.marginBottom = '3px';
-
-      const title = document.createElement('div');
-      title.textContent = `${coordinates(event.latitude, event.longitude)} · ${event.frp.toFixed(1)} MW FRP`;
-      title.style.fontWeight = '600';
-      title.style.fontSize = '11px';
-
-      const score = document.createElement('div');
-      score.textContent = `Risk Score: ${((event.risk?.score || 0) * 100).toFixed(1)}/100 · ${event.prediction.label}`;
-      score.style.color = '#cad5dd';
-      score.style.fontSize = '9.5px';
-      score.style.marginTop = '2px';
-
       const facilityName = event.nearbyFacility || event.context?.industrial_site_name;
-      if (facilityName) {
-        const fac = document.createElement('div');
-        fac.textContent = `Facility: ${facilityName}`;
-        fac.style.color = '#fef08a';
-        fac.style.fontSize = '9px';
-        fac.style.marginTop = '3px';
-        tip.append(badge, title, score, fac);
-      } else {
-        tip.append(badge, title, score);
-      }
+      const facHtml = facilityName ? `<div style="color:#fef08a;font-size:9px;margin-top:3px">Facility: ${facilityName}</div>` : '';
+      const coordsText = `${coordinates(event.latitude, event.longitude)} · ${event.frp.toFixed(1)} MW FRP`;
+      const riskText = `Risk Score: ${((event.risk?.score || 0) * 100).toFixed(1)}/100 · ${event.prediction.label}`;
+      const badgeText = isCritical ? 'CRITICAL PRIORITY ALERT' : 'HIGH PRIORITY ALERT';
 
-      halo.bindTooltip(tip, { direction: 'top', offset: [0, -8] });
-      core.bindTooltip(tip, { direction: 'top', offset: [0, -8] });
-      halo.on('click', () => click.current(event));
+      core.bindTooltip(
+        `<div style="min-width:180px;padding:2px"><div style="font-weight:800;font-size:10px;letter-spacing:0.04em;color:${haloColor};margin-bottom:3px">${badgeText}</div><div style="font-weight:600;font-size:11px">${coordsText}</div><div style="color:#cad5dd;font-size:9.5px;margin-top:2px">${riskText}</div>${facHtml}</div>`,
+        { direction: 'top', offset: [0, -8] }
+      );
       core.on('click', () => click.current(event));
 
       halo.addTo(layer);
