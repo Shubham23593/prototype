@@ -58,9 +58,9 @@ function ObservationLayer({ events, onSelect, onHover, visible, scaled }: {
       const color = CLASSES[event.prediction.classKey]?.color || '#94a3b8';
       const marker = L.circleMarker([event.latitude, event.longitude], {
         renderer,
-        radius: scaled ? Math.min(6.5, 2.5 + Math.sqrt(event.frp) * .22) : 4.5,
+        radius: scaled ? Math.min(4.8, 1.7 + Math.sqrt(event.frp) * .19) : 3.2,
         color,
-        weight: 1,
+        weight: .7,
         opacity: .95,
         fillColor: color,
         fillOpacity: .85
@@ -69,7 +69,7 @@ function ObservationLayer({ events, onSelect, onHover, visible, scaled }: {
       const classText = CLASSES[event.prediction.classKey]?.short || event.prediction.classKey;
       marker.bindTooltip(
         `<div style="font-weight:700;font-size:11px">${coordsText}</div><div style="color:#acbcc7;margin-top:3px;font-size:10.5px">${event.frp.toFixed(1)} MW · ${classText}</div>`,
-        { direction: 'top', offset: [0, -6], sticky: true }
+        { direction: 'top', offset: [0, -5], sticky: true }
       );
       marker.on('click', () => click.current(event));
       marker.on('mouseover', () => hover.current(event));
@@ -82,12 +82,12 @@ function ObservationLayer({ events, onSelect, onHover, visible, scaled }: {
       const isCritical = event.risk?.level === 'critical';
       const haloColor = isCritical ? '#ef4444' : '#f97316';
       const coreColor = isCritical ? '#dc2626' : '#ea580c';
-      const baseRadius = scaled ? Math.min(7.5, 3.2 + Math.sqrt(event.frp) * .25) : 5.5;
+      const baseRadius = scaled ? Math.min(6.5, 2.8 + Math.sqrt(event.frp) * .22) : 4.5;
 
       // Outer glowing halo (non-interactive so it doesn't double-bind events)
       const halo = L.circleMarker([event.latitude, event.longitude], {
         renderer,
-        radius: baseRadius + 7,
+        radius: baseRadius + 6,
         color: haloColor,
         weight: 2,
         opacity: 0.95,
@@ -102,7 +102,7 @@ function ObservationLayer({ events, onSelect, onHover, visible, scaled }: {
         renderer,
         radius: baseRadius,
         color: '#ffffff',
-        weight: 2,
+        weight: 1.8,
         opacity: 1,
         fillColor: coreColor,
         fillOpacity: 0.95,
@@ -138,11 +138,10 @@ function MapEffects({ region, selected, fullScreen, reset }: {region: Region; se
   }, [region, map, reset]);
   useEffect(() => {
     if (!selected) return;
-    map.flyTo([selected.latitude, selected.longitude], Math.max(map.getZoom(), 7), { duration: .65 });
     const ring = L.circleMarker([selected.latitude, selected.longitude], {
-      radius: 12,
+      radius: 11,
       color: '#ffffff',
-      weight: 2,
+      weight: 1.8,
       fillOpacity: .1,
       interactive: false,
     }).addTo(map);
