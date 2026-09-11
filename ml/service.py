@@ -15,7 +15,7 @@ import hmac
 from pydantic import BaseModel, Field
 import pandas as pd
 import httpx
-import httpx
+import ssl
 from xgboost import XGBClassifier
 from ml.features import normalize, feature_matrix, add_history, CONTEXT_FEATURES, calculate_risk, derive_sih_classification, calculate_prediction_confidence
 from ml.connectors import get_context, STAC_URL, HEADERS
