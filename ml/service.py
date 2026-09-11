@@ -16,9 +16,8 @@ from pydantic import BaseModel, Field
 import pandas as pd
 import httpx
 import httpx
-import ssl
 from xgboost import XGBClassifier
-from ml.features import normalize, feature_matrix, add_history, CONTEXT_FEATURES, calculate_risk, derive_sih_classification
+from ml.features import normalize, feature_matrix, add_history, CONTEXT_FEATURES, calculate_risk, derive_sih_classification, calculate_prediction_confidence
 from ml.connectors import get_context, STAC_URL, HEADERS
 from ml.train import ROOT, ARTIFACTS, DEFAULT_DATA, train
 
@@ -159,9 +158,22 @@ def predict(request: PredictionRequest):
             temperature_delta=t_delta
         )
 
+        pred_score = calculate_prediction_confidence(
+            class_key=class_key,
+            nasa_confidence=conf_str,
+            frp=frp_val,
+            brightness=bright_val,
+            temperature_delta=t_delta,
+            active_days=active_days,
+            dist_m=dist_m_val,
+            model_proba=score,
+            ndvi=ndvi_val,
+            ndbi=ndbi_val,
+        )
+
         risk = calculate_risk(
             frp=frp_val, brightness=bright_val, confidence=conf_str, category=class_key,
-            dist_m=dist_m_val, power_nearby=power_nearby, model_score=score,
+            dist_m=dist_m_val, power_nearby=power_nearby, model_score=pred_score,
             facility_name=facility_name
         )
 
@@ -171,7 +183,7 @@ def predict(request: PredictionRequest):
             "classKey": class_key,
             "rawClassKey": definition["key"],
             "label": label,
-            "score": round(score, 6),
+            "score": pred_score,
             "modelId": card["model_id"],
             "featureMode": card["feature_mode"],
             "explanation": explanation,

@@ -1,5 +1,7 @@
 export type DataMode = 'archive' | 'live';
 export type PrimaryClass = 'industrial' | 'non_industrial' | 'uncertain';
+export type WindowSize = 'today' | '24h' | '48h' | '7d';
+export type FilterCategory = 'all' | 'all_industrial' | 'all_non_industrial' | ClassKey;
 export type ClassKey =
   | 'normal_industrial'
   | 'persistent'

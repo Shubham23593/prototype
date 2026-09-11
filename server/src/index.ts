@@ -21,8 +21,8 @@ const engine = new Engine();
 const strictDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value, 'Invalid calendar date');
 const querySchema = z.object({
   mode: z.enum(['archive', 'live']).default('archive'), region: z.string().refine(value => engine.getRegions().some(region => region.id === value), 'Unknown region').default('india'),
-  window: z.enum(['24h', '48h', '7d']).default('24h'),
-  classKey: z.enum(['all', 'industrial', 'major_industrial', 'normal_industrial', 'gas_flare', 'persistent', 'forest', 'agriculture', 'waste', 'offshore', 'uncertain', 'unclassified', 'vegetation', 'static']).default('all'),
+  window: z.enum(['today', '24h', '48h', '7d']).default('24h'),
+  classKey: z.enum(['all', 'all_industrial', 'all_non_industrial', 'industrial', 'major_industrial', 'normal_industrial', 'gas_flare', 'persistent', 'forest', 'agriculture', 'waste', 'offshore', 'uncertain', 'unclassified', 'vegetation', 'static']).default('all'),
   from: strictDate.optional(), to: strictDate.optional(), q: z.string().max(100).optional(),
 }).refine(value => Boolean(value.from) === Boolean(value.to), 'Provide both from and to dates')
   .refine(value => !value.from || !value.to || (value.from <= value.to && Date.parse(value.to) - Date.parse(value.from) <= 6 * 86400000), 'Select a date range of up to seven calendar days');
@@ -68,9 +68,17 @@ app.post('/api/sources/firms/refresh', expensiveLimit, async (_req, res) => {
 });
 app.get('/api/overview', async (req, res) => { res.json(await engine.overview(filters(req))); });
 app.get('/api/observations', async (req, res) => {
-  const options = z.object({ page: z.coerce.number().int().min(1).max(100000).default(1), pageSize: z.coerce.number().int().min(1).max(100).default(12), sort: z.enum(['recent', 'frp', 'score']).default('recent') }).parse(req.query);
+  const options = z.object({ page: z.coerce.number().int().min(1).max(100000).default(1), pageSize: z.coerce.number().int().min(1).max(100).default(12), sort: z.enum(['recent', 'frp', 'score', 'risk']).default('recent') }).parse(req.query);
   const { events, overview } = await engine.query(filters(req));
-  events.sort(options.sort === 'frp' ? (a, b) => b.frp - a.frp : options.sort === 'score' ? (a, b) => (b.prediction.score || 0) - (a.prediction.score || 0) : (a, b) => b.acquiredAt.localeCompare(a.acquiredAt) || b.frp - a.frp);
+  events.sort(
+    options.sort === 'frp'
+      ? (a, b) => b.frp - a.frp || (b.prediction.score || 0) - (a.prediction.score || 0)
+      : options.sort === 'score'
+      ? (a, b) => (b.prediction.score || 0) - (a.prediction.score || 0) || b.frp - a.frp
+      : options.sort === 'risk'
+      ? (a, b) => ((b.risk?.score || 0) - (a.risk?.score || 0)) || b.frp - a.frp
+      : (a, b) => b.acquiredAt.localeCompare(a.acquiredAt) || b.frp - a.frp
+  );
   res.json({ events: events.slice((options.page - 1) * options.pageSize, options.page * options.pageSize), total: events.length, page: options.page, pageSize: options.pageSize, range: overview.range, mode: overview.mode });
 });
 app.get('/api/events/:id', async (req, res) => {

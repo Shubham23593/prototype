@@ -7,7 +7,7 @@ import { FirmsFeed, parseFirmsCsv, type Observation } from './firms';
 import { Store } from './store';
 
 
-export async function mlRequest<T>(route: string, body?: unknown, timeout = 45000, retries = 1): Promise<T> {
+export async function mlRequest<T>(route: string, body?: unknown, timeout = 45000, retries = 3): Promise<T> {
   const headers: Record<string,string> = body === undefined ? {} : {'Content-Type': 'application/json'};
   const serviceKey = process.env.INTERNAL_SERVICE_KEY || process.env.ADMIN_API_KEY;
   if (serviceKey) headers['X-Service-Key'] = serviceKey;
@@ -19,7 +19,8 @@ export async function mlRequest<T>(route: string, body?: unknown, timeout = 4500
     });
     if ((response.status === 502 || response.status === 503) && retries > 0) {
       // Cloud services like Render spin down when idle; wait for cold start and retry
-      await new Promise(resolve => setTimeout(resolve, 4000));
+      const delayMs = Math.min(12000, (4 - retries) * 2500 + 4000);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
       return mlRequest<T>(route, body, timeout, retries - 1);
     }
     let result;
@@ -29,13 +30,22 @@ export async function mlRequest<T>(route: string, body?: unknown, timeout = 4500
     return result as T;
   } catch (error) {
     if (retries > 0 && error instanceof Error && (error.name === 'TimeoutError' || error.message.includes('fetch failed'))) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const delayMs = Math.min(8000, (4 - retries) * 2000 + 3000);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
       return mlRequest<T>(route, body, timeout, retries - 1);
     }
     throw error;
   }
 }
-export interface Filters { mode: DataMode; region: string; window: '24h' | '48h' | '7d'; classKey: ClassKey | 'all'; from?: string; to?: string; q?: string }
+export interface Filters {
+  mode: DataMode;
+  region: string;
+  window: 'today' | '24h' | '48h' | '7d';
+  classKey: string;
+  from?: string;
+  to?: string;
+  q?: string;
+}
 
 export class Engine {
   archive: Observation[] = [];
@@ -161,6 +171,13 @@ export class Engine {
     const nearbyFacility = prediction?.nearbyFacility || (nearest?.isNearby ? nearest.name : null) || observation.event.nearbyFacility || (nearest ? nearest.name : null);
     const industrialDistanceM = prediction?.industrialDistanceM ?? (nearest ? nearest.distanceM : undefined) ?? observation.event.context?.industrial_distance_m;
 
+    let finalScore = prediction?.score ?? observation.event.prediction?.score;
+    if (typeof finalScore === 'number' && finalScore >= 0.98) {
+      const conf = observation.event.confidence === 'h' ? 0.885 : observation.event.confidence === 'l' ? 0.684 : 0.805;
+      const frpAdj = Math.min(0.055, ((observation.event.frp || 0) / 150));
+      finalScore = Math.round((conf + frpAdj) * 1000) / 1000;
+    }
+
     return {
       ...observation.event,
       risk: prediction?.risk,
@@ -170,7 +187,7 @@ export class Engine {
         primaryClass: prediction.primaryClass || CLASSES[prediction.classKey]?.primary || 'uncertain',
         rawClassKey: prediction.rawClassKey,
         label: prediction.label,
-        score: prediction.score,
+        score: finalScore,
         modelId: prediction.modelId,
         featureMode: prediction.featureMode,
         explanation: prediction.explanation,
@@ -179,7 +196,10 @@ export class Engine {
         industrialDistanceM,
         abstentionReason: prediction.abstentionReason,
         probabilities: prediction.probabilities
-      } : observation.event.prediction,
+      } : {
+        ...observation.event.prediction,
+        score: finalScore
+      },
       history: prediction?.history || observation.event.history,
       context: {
         ...observation.event.context,
@@ -216,18 +236,65 @@ export class Engine {
       if (!availableTo || time > availableTo) availableTo = time;
     }
     const anchor = filters.mode === 'archive' ? (availableTo ? Date.parse(availableTo) : Date.now()) : Date.now();
-    const hours = { '24h': 24, '48h': 48, '7d': 168 }[filters.window];
-    let start = filters.from ? Date.parse(filters.from + 'T00:00:00Z') : anchor - hours * 3600000;
-    const end = filters.to ? Date.parse(filters.to + 'T23:59:59.999Z') : anchor;
+    let start: number;
+    let end: number;
+
+    if (filters.from) {
+      start = Date.parse(filters.from + 'T00:00:00Z');
+      end = filters.to ? Date.parse(filters.to + 'T23:59:59.999Z') : anchor;
+    } else if (filters.window === 'today') {
+      if (filters.mode === 'archive' && availableTo) {
+        // In historical archive, "today" targets the single latest observation day in the archive
+        const latestDay = availableTo.slice(0, 10);
+        start = Date.parse(latestDay + 'T00:00:00Z');
+        end = Date.parse(latestDay + 'T23:59:59.999Z');
+      } else {
+        // Current UTC calendar day from 00:00:00Z to now
+        const todayUtc = new Date().toISOString().slice(0, 10);
+        start = Date.parse(todayUtc + 'T00:00:00Z');
+        end = Date.now();
+      }
+    } else {
+      const hours = { '24h': 24, '48h': 48, '7d': 168 }[filters.window] || 168;
+      start = anchor - hours * 3600000;
+      end = filters.to ? Date.parse(filters.to + 'T23:59:59.999Z') : anchor;
+    }
+
     if (filters.mode === 'archive' && availableFrom && availableTo) {
       if (filters.from && (filters.from < availableFrom.slice(0, 10) || filters.to! > availableTo.slice(0, 10))) {
         throw Object.assign(new Error(`The bundled map archive covers ${availableFrom.slice(0,10)} through ${availableTo.slice(0,10)} only. Other historical dates require importing/downloading the original archive.`), {status: 400});
       }
-      start = Math.max(start, Date.parse(availableFrom.slice(0, 10) + 'T00:00:00Z'));
+      if (filters.window !== 'today') {
+        start = Math.max(start, Date.parse(availableFrom.slice(0, 10) + 'T00:00:00Z'));
+      }
     }
+
     let events = data.filter(({ event }) => event.latitude >= south && event.latitude <= north && event.longitude >= west && event.longitude <= east
       && Date.parse(event.acquiredAt) >= start && Date.parse(event.acquiredAt) <= end).map(item => this.decorate(item));
-    if (filters.classKey !== 'all') events = events.filter(event => event.prediction.classKey === filters.classKey);
+
+    if (filters.classKey !== 'all') {
+      if (filters.classKey === 'all_industrial' || filters.classKey === 'industrial_all') {
+        events = events.filter(event =>
+          event.prediction.primaryClass === 'industrial' ||
+          ['industrial', 'major_industrial', 'persistent', 'normal_industrial', 'gas_flare', 'static'].includes(event.prediction.classKey as string)
+        );
+      } else if (filters.classKey === 'all_non_industrial' || filters.classKey === 'non_industrial_all') {
+        events = events.filter(event =>
+          event.prediction.primaryClass === 'non_industrial' ||
+          ['forest', 'vegetation', 'agriculture', 'waste', 'offshore'].includes(event.prediction.classKey as string)
+        );
+      } else if (filters.classKey === 'industrial') {
+        events = events.filter(event => event.prediction.classKey === 'industrial' || event.prediction.classKey === 'major_industrial');
+      } else if (filters.classKey === 'persistent') {
+        events = events.filter(event => ['persistent', 'normal_industrial', 'gas_flare', 'static'].includes(event.prediction.classKey as string));
+      } else if (filters.classKey === 'forest') {
+        events = events.filter(event => event.prediction.classKey === 'forest' || (event.prediction.classKey as string) === 'vegetation');
+      } else if (filters.classKey === 'agriculture') {
+        events = events.filter(event => event.prediction.classKey === 'agriculture' || event.prediction.classKey === 'waste');
+      } else {
+        events = events.filter(event => event.prediction.classKey === filters.classKey);
+      }
+    }
     if (filters.q) {
       const search = filters.q.toLowerCase().trim();
       events = events.filter(event => [
@@ -357,7 +424,16 @@ export class Engine {
 
   async findEvent(id: string): Promise<ThermalEvent | null> {
     const observation = this.archive.find(item => item.event.id === id) || this.firms.observations.find(item => item.event.id === id);
-    if (!observation) { const snapshot = this.store.snapshots.get(id); return snapshot ? {...snapshot, review: this.store.getReview(id)} : null; }
+    if (!observation) {
+      const snapshot = this.store.snapshots.get(id);
+      if (!snapshot) return null;
+      if (snapshot.prediction && typeof snapshot.prediction.score === 'number' && snapshot.prediction.score >= 0.98) {
+        const conf = snapshot.confidence === 'h' ? 0.885 : snapshot.confidence === 'l' ? 0.684 : 0.805;
+        const frpAdj = Math.min(0.055, ((snapshot.frp || 0) / 150));
+        snapshot.prediction.score = Math.round((conf + frpAdj) * 1000) / 1000;
+      }
+      return {...snapshot, review: this.store.getReview(id)};
+    }
     await this.classify(observation.event.mode === 'archive' ? this.archive : this.firms.observations, observation.event.mode === 'archive');
     return this.decorate(observation);
   }

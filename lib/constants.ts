@@ -29,6 +29,94 @@ export const CLASSES: Record<ClassKey, { label: string; short: string; color: st
   static: { label: 'Persistent Thermal Source', short: 'Persistent Thermal Source', color: '#7c3aed', bg: '#ede9fe', primary: 'industrial' },
 };
 
+export type ApplicationCategory =
+  | 'Potential Industrial Fire'
+  | 'Persistent Thermal Source'
+  | 'Forest/Natural Fire'
+  | 'Agricultural/Waste Burning'
+  | 'Other/Uncertain';
+
+export interface CategoryInfo {
+  name: ApplicationCategory;
+  short: string;
+  color: string;
+  bg: string;
+  border: string;
+  primary: PrimaryClass;
+  subtitle: string;
+  description: string;
+}
+
+export const APPLICATION_CATEGORIES: Record<ApplicationCategory, CategoryInfo> = {
+  'Potential Industrial Fire': {
+    name: 'Potential Industrial Fire',
+    short: 'Potential Industrial Fire',
+    color: '#dc2626',
+    bg: '#fee2e2',
+    border: '#fca5a5',
+    primary: 'industrial',
+    subtitle: 'Requires Ground Verification',
+    description: 'Acute thermal anomaly located near mapped industrial facilities or infrastructure. Requires ground verification before taking action.'
+  },
+  'Persistent Thermal Source': {
+    name: 'Persistent Thermal Source',
+    short: 'Persistent Thermal Source',
+    color: '#7c3aed',
+    bg: '#ede9fe',
+    border: '#ddd6fe',
+    primary: 'industrial',
+    subtitle: 'Normal Industrial Heat / Stack / Flare',
+    description: 'Recurrent high-temperature heat signature consistent with furnaces, flare stacks, kilns, or refineries.'
+  },
+  'Forest/Natural Fire': {
+    name: 'Forest/Natural Fire',
+    short: 'Forest / Natural Fire',
+    color: '#16a34a',
+    bg: '#dcfce7',
+    border: '#bbf7d0',
+    primary: 'non_industrial',
+    subtitle: 'Natural Vegetation Anomaly',
+    description: 'Thermal anomaly in natural vegetation, wilderness, or forest land cover.'
+  },
+  'Agricultural/Waste Burning': {
+    name: 'Agricultural/Waste Burning',
+    short: 'Agricultural / Waste Burning',
+    color: '#d97706',
+    bg: '#fef3c7',
+    border: '#fde68a',
+    primary: 'non_industrial',
+    subtitle: 'Seasonal Biomass Burning',
+    description: 'Seasonal crop residue burning, stubble clearing, or open biomass combustion.'
+  },
+  'Other/Uncertain': {
+    name: 'Other/Uncertain',
+    short: 'Other / Uncertain',
+    color: '#64748b',
+    bg: '#f1f5f9',
+    border: '#cbd5e1',
+    primary: 'uncertain',
+    subtitle: 'Review Required',
+    description: 'Thermal detection where model confidence was low or data was insufficient for trusted classification.'
+  }
+};
+
+export function getApplicationCategory(classKey?: string, rawClassKey?: string): CategoryInfo {
+  const key = (classKey || rawClassKey || '').toLowerCase();
+  if (key === 'industrial' || key === 'major_industrial' || key.includes('major_incident') || key.includes('industrial fire')) {
+    return APPLICATION_CATEGORIES['Potential Industrial Fire'];
+  }
+  if (key === 'persistent' || key === 'normal_industrial' || key === 'gas_flare' || key === 'static' || key.includes('flare')) {
+    return APPLICATION_CATEGORIES['Persistent Thermal Source'];
+  }
+  if (key === 'forest' || key === 'vegetation') {
+    return APPLICATION_CATEGORIES['Forest/Natural Fire'];
+  }
+  if (key === 'agriculture' || key === 'waste') {
+    return APPLICATION_CATEGORIES['Agricultural/Waste Burning'];
+  }
+  return APPLICATION_CATEGORIES['Other/Uncertain'];
+}
+
 export const RISK_LEVELS: Record<RiskLevel, { label: string; color: string; bg: string }> = {
   low: { label: 'Low Risk', color: '#10b981', bg: '#d1fae5' },
   medium: { label: 'Medium Risk', color: '#f59e0b', bg: '#fef3c7' },

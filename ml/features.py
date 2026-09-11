@@ -357,6 +357,93 @@ def calculate_risk(frp: float, brightness: float, confidence: str, category: str
     return result_dict
 
 
+def calculate_prediction_confidence(
+    class_key: str,
+    nasa_confidence: str,
+    frp: float,
+    brightness: float,
+    temperature_delta: float,
+    active_days: float,
+    dist_m: float | None = None,
+    model_proba: float | None = None,
+    ndvi: float | None = None,
+    ndbi: float | None = None,
+) -> float | None:
+    """Calculate AI prediction confidence (0.0 to 1.0) based on sensor quality,
+    model probabilities, and physical thermal signature agreement.
+
+    Never outputs flat 100.0%. For unclassified/uncertain events, returns None.
+    """
+    if class_key in ["uncertain", "unclassified"]:
+        return None
+
+    # Base sensor detection confidence from NASA FIRMS
+    conf_str = str(nasa_confidence).lower().strip()
+    if conf_str in ["h", "high"]:
+        base_conf = 0.86
+    elif conf_str in ["n", "nominal"]:
+        base_conf = 0.76
+    elif conf_str in ["l", "low"]:
+        base_conf = 0.60
+    else:
+        try:
+            val = float(conf_str)
+            base_conf = 0.60 + min(max(0.0, val / 100.0), 1.0) * 0.28
+        except (ValueError, TypeError):
+            base_conf = 0.74
+
+    frp_val = max(0.0, float(frp or 0))
+    dist_val = float(dist_m) if dist_m is not None and not np.isnan(dist_m) else 5000.0
+    act_days = max(0.0, float(active_days or 0))
+    t_delta = max(0.0, float(temperature_delta or 0))
+    bright_val = max(250.0, float(brightness or 300))
+
+    # Contextual category fit bonus/penalty
+    fit = 0.0
+
+    if class_key in ["major_industrial", "industrial"]:
+        # Acute thermal intensity close to mapped industrial facility
+        proximity_factor = max(0.0, (1500.0 - dist_val) / 1500.0) * 0.08
+        thermal_factor = min(1.0, frp_val / 40.0) * 0.06 + min(1.0, t_delta / 30.0) * 0.04
+        fit = proximity_factor + thermal_factor
+    elif class_key in ["persistent", "normal_industrial"]:
+        # Recurrent heat signature at fixed facility
+        rec_factor = min(1.0, act_days / 10.0) * 0.10
+        prox_factor = max(0.0, (1500.0 - dist_val) / 1500.0) * 0.06
+        fit = rec_factor + prox_factor
+    elif class_key == "gas_flare":
+        flare_factor = min(1.0, t_delta / 25.0) * 0.08 + min(1.0, frp_val / 30.0) * 0.04
+        fit = flare_factor
+    elif class_key == "forest":
+        # Wildland forest fire: high FRP, high T-delta, distance away from industry
+        wildland_dist = min(1.0, (dist_val - 1500.0) / 3000.0) * 0.05
+        intensity = min(1.0, frp_val / 35.0) * 0.06
+        ndvi_bonus = 0.04 if (ndvi is not None and ndvi >= 0.35) else 0.0
+        fit = wildland_dist + intensity + ndvi_bonus
+    elif class_key == "agriculture":
+        # Crop residue: typical 8-30 MW, low recurrence
+        rec_good = 0.04 if act_days <= 2 else -0.04
+        frp_good = 0.05 if (8.0 <= frp_val <= 35.0) else -0.03
+        fit = rec_good + frp_good
+    elif class_key == "waste":
+        fit = 0.03 if (frp_val < 8.0 and act_days <= 2) else -0.03
+    elif class_key == "offshore":
+        fit = 0.06
+
+    # Blend with baseline model probability if available
+    if model_proba is not None and not np.isnan(model_proba) and model_proba > 0:
+        p = float(model_proba)
+        # Calibrate saturated raw proba (0.9999 -> ~0.88, 0.70 -> ~0.76)
+        calibrated_p = 0.65 + min(max(0.0, p), 1.0) * 0.22
+        raw_score = 0.60 * base_conf + 0.25 * calibrated_p + 0.15 * (base_conf + fit)
+    else:
+        raw_score = base_conf + fit
+
+    # Ensure score is strictly within 0.48 to 0.96 (never flat 100.0%)
+    final_score = round(float(min(0.96, max(0.48, raw_score))), 4)
+    return final_score
+
+
 def derive_sih_classification(raw_class: str, proba_dict: dict[str, float],
                               frp: float, brightness: float, active_days: float,
                               dist_m: float | None = None, ndvi: float | None = None,

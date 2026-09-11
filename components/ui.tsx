@@ -1,35 +1,50 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { Satellite, LoaderCircle, AlertCircle, ArrowUpRight, X, Check } from 'lucide-react';
-import { CLASSES, PRIMARY_CLASSES } from '@/lib/constants';
+import { CLASSES, PRIMARY_CLASSES, getApplicationCategory } from '@/lib/constants';
 import type { ClassKey, PrimaryClass, SourceState } from '@/lib/types';
 
 export function ClassBadge({ classKey, primaryClass, compact = false }: {classKey: ClassKey; primaryClass?: PrimaryClass; compact?: boolean}) {
-  const config = CLASSES[classKey] || CLASSES.uncertain;
-  return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 font-medium ${compact ? 'text-[9.5px]' : 'text-[10.5px]'}`} style={{ color: config.color, background: config.bg }}><span className="h-1.5 w-1.5 rounded-full" style={{background: config.color}} />{config.short}</span>;
+  const category = getApplicationCategory(classKey);
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-semibold border ${compact ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'}`}
+      style={{ color: category.color, background: category.bg, borderColor: category.border }}
+    >
+      <span className="h-2 w-2 rounded-full" style={{ background: category.color }} />
+      {category.short}
+    </span>
+  );
 }
 
 export function PrimaryBadge({ primaryClass, compact = false }: {primaryClass?: PrimaryClass; compact?: boolean}) {
   const p = primaryClass || 'uncertain';
   const config = PRIMARY_CLASSES[p] || PRIMARY_CLASSES.uncertain;
-  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 font-semibold uppercase tracking-wider ${compact ? 'text-[8px]' : 'text-[9px]'}`} style={{ color: config.color, background: config.bg }}>{config.label}</span>;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded font-bold uppercase tracking-wider ${compact ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'}`}
+      style={{ color: config.color, background: config.bg }}
+    >
+      {config.label}
+    </span>
+  );
 }
 
 export function RiskBadge({ level, compact = false }: {level?: 'low' | 'medium' | 'high' | 'critical'; compact?: boolean}) {
-  if (!level) return <span className="text-[10px] text-[#99a7b0]">—</span>;
+  if (!level) return <span className="text-xs text-[#99a7b0]">—</span>;
   const styles: Record<string, { label: string; text: string; bg: string; border: string }> = {
-    critical: { label: 'Critical', text: '#d94828', bg: '#fff0ec', border: '#fbcbb8' },
-    high: { label: 'High', text: '#c9622d', bg: '#fff4eb', border: '#fed7ba' },
-    medium: { label: 'Medium', text: '#ab8339', bg: '#fdf7ec', border: '#f2deae' },
-    low: { label: 'Low', text: '#4d866a', bg: '#eff8f3', border: '#c8e4d3' },
+    critical: { label: 'Critical Priority', text: '#dc2626', bg: '#fee2e2', border: '#fca5a5' },
+    high: { label: 'High Priority', text: '#ea580c', bg: '#ffedd5', border: '#fdba74' },
+    medium: { label: 'Medium Risk', text: '#d97706', bg: '#fef3c7', border: '#fde68a' },
+    low: { label: 'Low Risk', text: '#16a34a', bg: '#dcfce7', border: '#bbf7d0' },
   };
   const cfg = styles[level] || styles.low;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-md border font-medium ${compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[10px]'}`}
+      className={`inline-flex items-center gap-1.5 rounded-md border font-semibold ${compact ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'}`}
       style={{ color: cfg.text, background: cfg.bg, borderColor: cfg.border }}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: cfg.text }} />
+      <span className="h-2 w-2 rounded-full" style={{ background: cfg.text }} />
       {cfg.label}
     </span>
   );

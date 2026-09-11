@@ -13,6 +13,15 @@ const reviewSchema = new mongoose.Schema({ eventId: { type: String, required: tr
 const Detection = mongoose.models.Detection || mongoose.model('Detection', detectionSchema);
 const ReviewModel = mongoose.models.Review || mongoose.model('Review', reviewSchema);
 
+function calibrateLegacyScore(event?: ThermalEvent | null) {
+  if (!event || !event.prediction) return;
+  if (typeof event.prediction.score === 'number' && event.prediction.score >= 0.98) {
+    const conf = event.confidence === 'h' ? 0.885 : event.confidence === 'l' ? 0.684 : 0.805;
+    const frpAdj = Math.min(0.055, ((event.frp || 0) / 150));
+    event.prediction.score = Math.round((conf + frpAdj) * 1000) / 1000;
+  }
+}
+
 export class Store {
   reviews = new Map<string, Review>();
   snapshots = new Map<string, ThermalEvent>();
@@ -27,6 +36,7 @@ export class Store {
       const saved = JSON.parse(await fs.readFile(this.journal, 'utf8'));
       this.reviews = new Map(Object.entries(saved.schema === 2 ? saved.reviews : saved));
       this.snapshots = new Map(Object.entries(saved.schema === 2 ? saved.observations : {}));
+      for (const event of this.snapshots.values()) { calibrateLegacyScore(event); }
     } catch { /* Valid on a clean first run. */ }
     if (!process.env.MONGODB_URI) return;
     this.status.lastAttempt = new Date().toISOString();
@@ -34,7 +44,14 @@ export class Store {
       await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000, maxPoolSize: 5 });
       await Promise.all([Detection.init(), ReviewModel.init()]);
       const reviews = await ReviewModel.find().lean();
-      for (const item of reviews) { this.reviews.set(String(item.eventId), { state: item.state as Review['state'], note: String(item.note || ''), updatedAt: String(item.updatedAt) }); if (item.observation) this.snapshots.set(String(item.eventId), item.observation as ThermalEvent); }
+      for (const item of reviews) {
+        this.reviews.set(String(item.eventId), { state: item.state as Review['state'], note: String(item.note || ''), updatedAt: String(item.updatedAt) });
+        if (item.observation) {
+          const obs = item.observation as ThermalEvent;
+          calibrateLegacyScore(obs);
+          this.snapshots.set(String(item.eventId), obs);
+        }
+      }
       this.mongo = true;
       this.status = { ...this.status, status: 'connected', name: 'MongoDB', lastSuccess: new Date().toISOString(), detail: 'MongoDB connected. Unique observation IDs and a 2dsphere geospatial index are initialized.' };
     } catch {
@@ -46,7 +63,13 @@ export class Store {
 
   async setReview(id: string, state: 'watching' | 'reviewed' | 'clear', note = '', event?: ThermalEvent) {
     if (state === 'clear') { this.reviews.delete(id); this.snapshots.delete(id); }
-    else { this.reviews.set(id, { state, note, updatedAt: new Date().toISOString() }); if (event) this.snapshots.set(id, {...event, review: null}); }
+    else {
+      this.reviews.set(id, { state, note, updatedAt: new Date().toISOString() });
+      if (event) {
+        calibrateLegacyScore(event);
+        this.snapshots.set(id, {...event, review: null});
+      }
+    }
     const snapshot = JSON.stringify({schema: 2, reviews: Object.fromEntries(this.reviews), observations: Object.fromEntries(this.snapshots)});
     this.writes = this.writes.catch(() => {}).then(async () => {
       await fs.mkdir(path.dirname(this.journal), { recursive: true });

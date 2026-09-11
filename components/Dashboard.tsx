@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, ArrowDownToLine, ArrowRight, ArrowUpRight, Bell, BookOpen, Bookmark, BrainCircuit, CalendarDays, Check, ChevronDown, ChevronRight, CircleHelp, Clock3, Database, Download, FileJson, FileSpreadsheet, Flame, Globe2, History, LayoutDashboard, ListFilter, LoaderCircle, MapPin, Menu, Network, Radio, RefreshCw, Satellite, ScanLine, Search, Settings2, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { api, useApi } from '@/lib/api';
 import { CLASSES, formatDate, formatNumber, REGIONS } from '@/lib/constants';
-import type { ClassKey, DataMode, Evidence, Page, SourceStatus, ThermalEvent } from '@/lib/types';
+import type { ClassKey, DataMode, Evidence, FilterCategory, Page, SourceStatus, ThermalEvent, WindowSize } from '@/lib/types';
 import OverviewView, { type OverviewData } from './OverviewView';
 import { ObservationsView, WatchlistView } from './ObservationsView';
 import HistoryView, { type ImportedDataset } from './HistoryView';
@@ -28,8 +28,8 @@ export default function Dashboard(){
   const [mobileNav,setMobileNav]=useState(false);
   const [mode,setMode]=useState<DataMode>('archive');
   const [regionId,setRegionId]=useState('india');
-  const [windowSize,setWindowSize]=useState<'24h'|'48h'|'7d'>('7d');
-  const [classKey,setClassKey]=useState<ClassKey|'all'>('all');
+  const [windowSize,setWindowSize]=useState<WindowSize>('7d');
+  const [classKey,setClassKey]=useState<FilterCategory>('all');
   const [dates,setDates]=useState<{from:string;to:string}|null>(null);
   const [dateModal,setDateModal]=useState(false);
   const [dateFrom,setDateFrom]=useState('');
@@ -73,7 +73,14 @@ export default function Dashboard(){
   const data=overview.data;
   const availableRegions = data?.regions || REGIONS;
   const region = availableRegions.find(item=>item.id===regionId) || data?.region || availableRegions[0];
-  const alerts: ThermalEvent[] = data?.alerts || (data?.events?.filter(e => e.risk?.level === 'critical' || e.risk?.level === 'high') || []);
+  const rawAlerts: ThermalEvent[] = data?.alerts || (data?.events?.filter(e => e.risk?.level === 'critical' || e.risk?.level === 'high') || []);
+  const alerts: ThermalEvent[] = Array.from(
+    new Map(
+      rawAlerts
+        .filter(e => e.risk && (e.risk.level === 'critical' || e.risk.level === 'high'))
+        .map(a => [a.id, a])
+    ).values()
+  );
   const unreadAlertCount = alerts.filter(a => !readAlertIds.has(a.id)).length;
   const filterSignature = `${mode}-${region.id}-${windowSize}-${classKey}-${dates?.from || ''}-${dates?.to || ''}-${data?.total || 0}-${alerts.length}`;
 
@@ -150,7 +157,15 @@ export default function Dashboard(){
   function applyDates(){if(!dateFrom||!dateTo||dateFrom>dateTo){setDateError('Choose valid start and end dates, in that order.');return;}if(Date.parse(dateTo)-Date.parse(dateFrom)>6*86400000){setDateError('The available map archive spans seven calendar days. Select a range within that window.');return;}if(data?.range.availableFrom&&dateFrom<data.range.availableFrom.slice(0,10)||data?.range.availableTo&&dateTo>data.range.availableTo.slice(0,10)){setDateError('Select dates inside the source’s available observation window.');return;}setDates({from:dateFrom,to:dateTo});setDateModal(false);}
   const saveImported=useCallback((value:ImportedDataset)=>{if(value&&Number(value.rows)>0){setImported(value);try{localStorage.setItem('thermoscan-imported-dataset',JSON.stringify(value));}catch{/* CSV itself remains server-side. */}}},[]);
 
-  const rangeLabel=dates?`${formatDate(dates.from,{year:undefined})} — ${formatDate(dates.to)}`:data?.range.availableTo&&mode==='archive'?`${formatDate(data.range.from,{year:undefined})} — ${formatDate(data.range.to)}`:`Last ${windowSize==='7d'?'7 days':windowSize==='48h'?'48 hours':'24 hours'}`;
+  const rangeLabel = dates
+    ? `${formatDate(dates.from, { year: undefined })} — ${formatDate(dates.to)}`
+    : windowSize === 'today'
+    ? data?.range?.to
+      ? `Today (${formatDate(data.range.to, { year: undefined })})`
+      : 'Today (UTC)'
+    : data?.range?.availableTo && mode === 'archive'
+    ? `${formatDate(data.range.from, { year: undefined })} — ${formatDate(data.range.to)}`
+    : `Last ${windowSize === '7d' ? '7 days' : windowSize === '48h' ? '48 hours' : '24 hours'}`;
 
   return <div className="min-h-screen">
     {mobileNav&&<button aria-label="Close navigation" className="fixed inset-0 z-[1900] bg-[#14242d66] lg:hidden" onClick={()=>setMobileNav(false)}/>}
@@ -173,83 +188,310 @@ export default function Dashboard(){
         <div className="flex items-center gap-3 sm:gap-5"><span className="hidden items-center gap-1.5 rounded-md border border-[#e8ecef] bg-[#f9fafb] px-2.5 py-1.5 text-[8px] text-[#92a1ab] md:flex"><span className="h-1 w-1 rounded-full bg-[#d3af88]"/>Research preview</span><UTCClock/><span className="h-4 w-px bg-[#edf0f3]"/><a href="/guide" target="_blank" rel="noopener noreferrer" title="Data and training guide" aria-label="Open data and training guide" className="icon-button -mx-1.5"><CircleHelp size={16} strokeWidth={1.6}/></a><div className="relative"><button aria-label="Open alert notifications" title={alerts.length ? `${unreadAlertCount} unread alert${unreadAlertCount === 1 ? '' : 's'} in current window` : 'No active alerts'} onClick={()=>setNotificationsOpen(!notificationsOpen)} className={`icon-button relative -mx-1.5 ${notificationsOpen ? 'bg-[#f1f5f9] text-[#0f172a]' : ''}`}><Bell size={16} strokeWidth={1.6} className={unreadAlertCount > 0 ? 'text-[#dc2626]' : ''} />{unreadAlertCount > 0 && (<span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#dc2626] px-1 text-[8.5px] font-bold text-white ring-2 ring-white animate-pulse">{unreadAlertCount}</span>)}</button>{notificationsOpen && (<NotificationPanel alerts={alerts} readAlertIds={readAlertIds} onSelectAlert={(alert) => { setSelected(alert); setNotificationsOpen(false); }} onMarkAllRead={() => { setReadAlertIds(new Set(alerts.map(a => a.id))); }} onMarkRead={(id) => { setReadAlertIds(prev => new Set(prev).add(id)); }} onClose={() => setNotificationsOpen(false)} onOpenReviewQueue={() => { setNotificationsOpen(false); navigate('watchlist'); }} filterLabel={`${rangeLabel} · ${region.name}`} />)}</div><button onClick={()=>navigate('sources')} aria-label="Workspace settings" className="flex h-[27px] w-[27px] items-center justify-center rounded-full border border-[#e5d9ce] bg-[#f2e8de] text-[8px] font-semibold text-[#ac8e73]">ST</button></div>
       </header>
       <main className="mx-auto max-w-[1720px] px-5 pb-7 pt-7 lg:px-7">
-        <div className="flex flex-wrap items-center justify-between gap-4"><div><div className="mb-2 flex items-center gap-1.5 text-[8px] font-medium uppercase tracking-[.14em] text-[#a7b2ba]"><Satellite size={10} strokeWidth={1.5}/>SATELLITE INSIGHTS, GROUNDED IN DATA</div><h1 className="font-display text-[26px] font-semibold tracking-[-.04em] text-[#283640] sm:text-[29px]">{PAGES[page].title}</h1><p className="mt-2 text-[10.5px] leading-5 text-[#91a0ab]">{PAGES[page].description}</p></div>
-          <div className="flex gap-2 self-center">{spatialPage&&<div className="relative" ref={exportRef}><button onClick={()=>setExportOpen(!exportOpen)} aria-expanded={exportOpen} disabled={!data||data.availability==='unavailable'} className="btn-secondary"><Download size={13}/>Export data<ChevronDown size={10}/></button>{exportOpen&&<div className="absolute right-0 top-11 z-[1500] w-56 rounded-lg border border-[#e6ebef] bg-white p-1.5 shadow-lg"><a href={`/api/export?${query}&format=csv`} onClick={()=>setExportOpen(false)} className="flex items-center gap-3 rounded-md p-3 text-[11px] text-[#8094a2] hover:bg-[#f5f7f9]"><FileSpreadsheet size={15}/><div>Download CSV<span className="mt-1 block text-[8px] text-[#a7b4bd]">All matching observations</span></div></a><a href={`/api/export?${query}&format=geojson`} onClick={()=>setExportOpen(false)} className="flex items-center gap-3 rounded-md p-3 text-[11px] text-[#8094a2] hover:bg-[#f5f7f9]"><FileJson size={15}/><div>Download GeoJSON<span className="mt-1 block text-[8px] text-[#a7b4bd]">Coordinates, predictions & source</span></div></a></div>}</div>}<button onClick={reload} disabled={refreshing||overview.loading&&spatialPage} className="btn-primary"><RefreshCw size={12} className={refreshing||overview.loading&&spatialPage?'animate-spin':''}/>{refreshing?'Refreshing…':'Refresh view'}</button></div>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#64748b]">
+              <Satellite size={14} strokeWidth={1.5} className="text-[#ea580c]" />
+              SATELLITE THERMAL MONITORING
+            </div>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-[#0f172a] sm:text-3xl">
+              {PAGES[page].title}
+            </h1>
+            <p className="mt-1.5 text-xs text-[#64748b]">
+              {PAGES[page].description}
+            </p>
+          </div>
         </div>
 
-        {spatialPage&&<>
-          <div className="mt-6 flex flex-wrap items-center gap-2.5">
-            <label className="relative"><MapPin size={13} className="pointer-events-none absolute left-3 top-3 text-[#9baab5]"/><select aria-label="Monitoring region" className="h-[37px] appearance-none rounded-lg border border-[#e3e8ec] bg-white py-2 pl-8 pr-8 text-[10px] font-medium text-[#7f919e]" value={region.id} onChange={event=>{setRegionId(event.target.value);setSelected(null);}}>{availableRegions.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select><ChevronDown size={10} className="pointer-events-none absolute right-3 top-3.5 text-[#a9b5be]"/></label>
-            <button className="btn-secondary !h-[37px] !min-h-0 !px-3 !text-[10px]" onClick={openDates}><CalendarDays size={12} className="text-[#9cabb5]"/>{rangeLabel}<ChevronDown size={10} className="text-[#a9b5be]"/></button>
-            <label className="relative"><ListFilter size={13} className="pointer-events-none absolute left-3 top-3 text-[#9baab5]"/><select aria-label="Filter source type" className="h-[37px] appearance-none rounded-lg border border-[#e3e8ec] bg-white py-2 pl-8 pr-8 text-[10px] font-medium text-[#7f919e]" value={classKey} onChange={event=>setClassKey(event.target.value as ClassKey|'all')}>
-              <option value="all">All source types</option>
-              <optgroup label="Industrial">
-                {Object.entries(CLASSES).filter(([_, val]) => val.primary === 'industrial').map(([key, val]) => (
-                  <option key={key} value={key}>{val.short}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Non-Industrial">
-                {Object.entries(CLASSES).filter(([_, val]) => val.primary === 'non_industrial').map(([key, val]) => (
-                  <option key={key} value={key}>{val.short}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Uncertain">
-                {Object.entries(CLASSES).filter(([_, val]) => val.primary === 'uncertain').map(([key, val]) => (
-                  <option key={key} value={key}>{val.short}</option>
-                ))}
-              </optgroup>
-            </select><ChevronDown size={10} className="pointer-events-none absolute right-3 top-3.5 text-[#a9b5be]"/></label>
-           <div className="ml-auto flex h-[37px] items-center rounded-lg border border-[#e2e8ec] bg-[#eef2f5] p-[3px] text-[10px]">
-  <button
-    onClick={() => setDataMode('archive')}
-    className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 transition ${
-      mode === 'archive'
-        ? 'bg-[#F3E8DE] font-semibold text-[#9C6F4F] shadow-sm'
-        : 'text-[#9FADB7]'
-    }`}
-  >
-    <History size={11} />
-    Historical
-  </button>
+        {spatialPage && (
+          <>
+            <div className="mt-6 rounded-2xl border border-[#e2e8f0] bg-white shadow-sm overflow-hidden">
+              {/* Top Bar: Workflow Step Sequence & Loaded Status */}
+              <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 bg-[#f8fafc] border-b border-[#e2e8f0]">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-bold uppercase tracking-wider text-[#475569]">
+                    Analyst Workflow:
+                  </span>
+                  <span className="text-[#64748b]">
+                    1. Select Mode/Date → 2. Load Events → 3. Select Hotspot → 4. Inspect Evidence → 5. Review & Export
+                  </span>
+                </div>
 
-  <button
-    onClick={() => setDataMode('live')}
-    className={`flex h-full items-center gap-1.5 rounded-[5px] px-3 transition ${
-      mode === 'live'
-        ? 'bg-[#E4F2EA] font-semibold text-[#4F8A68] shadow-sm'
-        : 'text-[#9FADB7]'
-    }`}
-  >
-    <Radio size={11} />
-    Near-real-time
-  </button>
-</div>
-          </div>
-          <div className={`my-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3.5 py-2.5 text-[9px] ${mode==='archive'?'border-[#eee6da] bg-[#fcf8f1] text-[#b09775]':data?.availability==='ready'?'border-[#e0ebe5] bg-[#f3f8f5] text-[#87a593]':'border-[#eedad3] bg-[#fff5f2] text-[#c9622d]'}`}>
-            <span className="flex items-center gap-2">
-              {mode==='archive'?<History size={12}/>:<Radio size={12}/>}
-              <span>
-                {mode==='archive' ? (
-                  <>Genuine historical observations <span className="mx-1.5 opacity-40">/</span> {data?.source?.name || 'Historical archive'} <span className="hidden xl:inline">· not a live feed</span></>
-                ) : data?.availability==='ready' ? (
-                  <>
-                    <span className="font-semibold">NASA FIRMS near-real-time observations</span>
-                    {data.stats.lastRefreshedAt && <span className="ml-2 opacity-75">· Refreshed: {new Date(data.stats.lastRefreshedAt).toLocaleTimeString()} UTC</span>}
-                    {data.range?.from && <span className="ml-2 opacity-60 hidden md:inline">({formatDate(data.range.from)} — {formatDate(data.range.to)})</span>}
-                  </>
-                ) : (
-                  <span className="font-semibold text-[#b84826]">Live source unavailable. Historical data is not being used as a fallback.</span>
-                )}
-              </span>
-            </span>
-            <button onClick={()=>navigate('sources')} className="flex items-center gap-1.5 font-medium">{mode==='archive'?'Source & provenance':'Inspect connection'}<ArrowUpRight size={11}/></button>
-          </div>
-          {data&&!data.model.available&&<div className="mb-4"><ErrorState message={data.model.error||'Inference is not currently available. No model scores are generated.'} retry={overview.reload}/></div>}
-          {overview.error&&<div className="mb-4"><ErrorState message={overview.error} retry={overview.reload}/></div>}
-        </>}
+                {/* Loaded Events Status */}
+                <div className="flex items-center gap-2">
+                  {overview.loading ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#cbd5e1] bg-[#f8fafc] px-3 py-1 text-xs font-medium text-[#475569]">
+                      <LoaderCircle size={13} className="animate-spin text-[#0284c7]" />
+                      Loading events…
+                    </span>
+                  ) : data?.events && data.events.length > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-1 text-xs font-bold text-[#166534]">
+                      <span className="h-2 w-2 rounded-full bg-[#16a34a]" />
+                      {data.events.length} Observations Loaded
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#cbd5e1] bg-[#f8fafc] px-3 py-1 text-xs font-medium text-[#64748b]">
+                      <span className="h-2 w-2 rounded-full bg-[#94a3b8]" />
+                      Ready to load events
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Controls Body */}
+              <div className="p-5 sm:p-6 space-y-4">
+                {/* Row 1: Primary Controls & Actions */}
+                <div className="flex flex-wrap items-center justify-between gap-3.5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Mode Toggle */}
+                    <div className="flex h-[38px] items-center rounded-lg border border-[#e2e8ec] bg-[#f1f5f9] p-[3px] text-xs">
+                      <button
+                        onClick={() => setDataMode('archive')}
+                        className={`flex h-full items-center gap-1.5 rounded-[6px] px-3 transition font-medium ${
+                          mode === 'archive'
+                            ? 'bg-white font-semibold text-[#9a3412] shadow-sm'
+                            : 'text-[#64748b] hover:text-[#0f172a]'
+                        }`}
+                      >
+                        <History size={13} />
+                        Historical Archive
+                      </button>
+                      <button
+                        onClick={() => setDataMode('live')}
+                        className={`flex h-full items-center gap-1.5 rounded-[6px] px-3 transition font-medium ${
+                          mode === 'live'
+                            ? 'bg-white font-semibold text-[#166534] shadow-sm'
+                            : 'text-[#64748b] hover:text-[#0f172a]'
+                        }`}
+                      >
+                        <Radio size={13} />
+                        Near-real-time
+                      </button>
+                    </div>
+
+                    {/* Date Window */}
+                    <button
+                      className="btn-secondary !h-[38px] !py-0 !px-3.5 text-xs font-semibold flex items-center gap-2"
+                      onClick={openDates}
+                      title="Select observation time window"
+                    >
+                      <CalendarDays size={14} className="text-[#64748b]" />
+                      <span>{rangeLabel}</span>
+                      <ChevronDown size={12} className="text-[#94a3b8]" />
+                    </button>
+
+                    {/* Region Selector */}
+                    <label className="relative">
+                      <MapPin size={14} className="pointer-events-none absolute left-3 top-3 text-[#64748b]" />
+                      <select
+                        aria-label="Monitoring region"
+                        className="h-[38px] appearance-none rounded-lg border border-[#e2e8ec] bg-white py-2 pl-8 pr-8 text-xs font-semibold text-[#334155]"
+                        value={region.id}
+                        onChange={(event) => {
+                          setRegionId(event.target.value);
+                          setSelected(null);
+                        }}
+                      >
+                        {availableRegions.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={12} className="pointer-events-none absolute right-3 top-3.5 text-[#94a3b8]" />
+                    </label>
+                  </div>
+
+                  {/* Primary Action Button & Export */}
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <button
+                      onClick={reload}
+                      disabled={refreshing || (overview.loading && spatialPage)}
+                      className="btn-primary !h-[38px] !py-0 !px-4 text-xs font-semibold flex items-center gap-2 shadow-sm"
+                    >
+                      <RefreshCw size={14} className={refreshing || (overview.loading && spatialPage) ? 'animate-spin' : ''} />
+                      <span>
+                        {refreshing || overview.loading
+                          ? 'Loading Events…'
+                          : data?.events && data.events.length > 0
+                          ? 'Refresh Events'
+                          : 'Load Events'}
+                      </span>
+                    </button>
+
+                    {/* Export Dropdown */}
+                    <div className="relative" ref={exportRef}>
+                      <button
+                        onClick={() => setExportOpen(!exportOpen)}
+                        aria-expanded={exportOpen}
+                        disabled={!data || data.availability === 'unavailable'}
+                        className="btn-secondary !h-[38px] !py-0 !px-3 text-xs font-semibold flex items-center gap-1.5"
+                      >
+                        <Download size={14} />
+                        <span>Export</span>
+                        <ChevronDown size={12} />
+                      </button>
+                      {exportOpen && (
+                        <div className="absolute right-0 top-11 z-[1500] w-60 rounded-xl border border-[#e2e8f0] bg-white p-2 shadow-xl">
+                          <a
+                            href={`/api/export?${query}&format=csv`}
+                            onClick={() => setExportOpen(false)}
+                            className="flex items-center gap-3 rounded-lg p-2.5 text-xs font-medium text-[#334155] hover:bg-[#f1f5f9]"
+                          >
+                            <FileSpreadsheet size={16} className="text-[#16a34a]" />
+                            <div>
+                              <div>Download CSV</div>
+                              <span className="text-[10px] text-[#94a3b8]">All matching observations</span>
+                            </div>
+                          </a>
+                          <a
+                            href={`/api/export?${query}&format=geojson`}
+                            onClick={() => setExportOpen(false)}
+                            className="flex items-center gap-3 rounded-lg p-2.5 text-xs font-medium text-[#334155] hover:bg-[#f1f5f9]"
+                          >
+                            <FileJson size={16} className="text-[#ea580c]" />
+                            <div>
+                              <div>Download GeoJSON</div>
+                              <span className="text-[10px] text-[#94a3b8]">Coordinates, predictions & risk</span>
+                            </div>
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 2: Category Filter & Provenance Badges */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3.5 border-t border-[#f1f5f9]">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748b]">
+                      Filter:
+                    </span>
+                    <div className="flex h-[36px] items-center rounded-lg border border-[#e2e8ec] bg-[#f1f5f9] p-[3px] text-xs">
+                      <button
+                        onClick={() => setClassKey('all')}
+                        className={`flex h-full items-center px-3 rounded-[5px] transition font-medium ${
+                          classKey === 'all'
+                            ? 'bg-white font-semibold text-[#0f172a] shadow-sm'
+                            : 'text-[#64748b] hover:text-[#0f172a]'
+                        }`}
+                        title="Show all hotspot categories"
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setClassKey('all_industrial')}
+                        className={`flex h-full items-center gap-1.5 px-3 rounded-[5px] transition font-medium ${
+                          classKey === 'all_industrial' || classKey === 'industrial' || classKey === 'persistent'
+                            ? 'bg-[#fee2e2] font-bold text-[#b91c1c] shadow-sm'
+                            : 'text-[#64748b] hover:text-[#b91c1c]'
+                        }`}
+                        title="Filter Industrial events only"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#dc2626]" />
+                        Industrial
+                      </button>
+                      <button
+                        onClick={() => setClassKey('all_non_industrial')}
+                        className={`flex h-full items-center gap-1.5 px-3 rounded-[5px] transition font-medium ${
+                          classKey === 'all_non_industrial' || classKey === 'forest' || classKey === 'agriculture'
+                            ? 'bg-[#dcfce7] font-bold text-[#15803d] shadow-sm'
+                            : 'text-[#64748b] hover:text-[#15803d]'
+                        }`}
+                        title="Filter Non-Industrial events only"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#16a34a]" />
+                        Non-Industrial
+                      </button>
+                    </div>
+
+                    <label className="relative">
+                      <ListFilter size={14} className="pointer-events-none absolute left-3 top-2.5 text-[#64748b]" />
+                      <select
+                        aria-label="Filter category"
+                        className="h-[36px] appearance-none rounded-lg border border-[#e2e8ec] bg-white py-1.5 pl-8 pr-8 text-xs font-semibold text-[#334155]"
+                        value={classKey}
+                        onChange={(event) => setClassKey(event.target.value as FilterCategory)}
+                      >
+                        <option value="all">All Categories</option>
+
+                        <optgroup label="── INDUSTRIAL ──">
+                          <option value="all_industrial">All Industrial Events</option>
+                          <option value="industrial">Potential Industrial Fire</option>
+                          <option value="persistent">Persistent Thermal Source</option>
+                        </optgroup>
+
+                        <optgroup label="── NON-INDUSTRIAL ──">
+                          <option value="all_non_industrial">All Non-Industrial Events</option>
+                          <option value="forest">Forest / Natural Fire</option>
+                          <option value="agriculture">Agricultural / Waste Burning</option>
+                        </optgroup>
+
+                        <optgroup label="── UNCERTAIN ──">
+                          <option value="uncertain">Other / Uncertain</option>
+                        </optgroup>
+                      </select>
+                      <ChevronDown size={12} className="pointer-events-none absolute right-3 top-3 text-[#94a3b8]" />
+                    </label>
+                  </div>
+
+                  {/* Sleek Provenance Indicator */}
+                  <div
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs ${
+                      mode === 'archive'
+                        ? 'border-[#eee6da] bg-[#fcf8f1] text-[#9a3412]'
+                        : data?.availability === 'ready'
+                        ? 'border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]'
+                        : 'border-[#fecaca] bg-[#fff1f2] text-[#991b1b]'
+                    }`}
+                  >
+                    {mode === 'archive' ? <History size={13} className="shrink-0" /> : <Radio size={13} className="shrink-0" />}
+                    <span className="truncate max-w-[320px] lg:max-w-[460px]">
+                      {mode === 'archive' ? (
+                        <>
+                          <span className="font-semibold">NASA FIRMS</span> · {data?.source?.name || 'Historical archive'} · Verified mirror
+                        </>
+                      ) : data?.availability === 'ready' ? (
+                        <>
+                          <span className="font-semibold">NASA FIRMS near-real-time</span>
+                          {data.stats.lastRefreshedAt && (
+                            <span className="opacity-75"> · {new Date(data.stats.lastRefreshedAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} UTC</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="font-semibold text-[#b84826]">Live source unavailable</span>
+                      )}
+                    </span>
+                    <button
+                      onClick={() => navigate('sources')}
+                      className="ml-1 shrink-0 font-semibold underline underline-offset-2 hover:opacity-80 flex items-center gap-0.5"
+                    >
+                      {mode === 'archive' ? 'Source' : 'Connection'}
+                      <ArrowUpRight size={11} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {data && !data.model.available && (
+              <div className="mb-4 mt-3">
+                <ErrorState
+                  message={data.model.error || 'Inference is not currently available. No model scores are generated.'}
+                  retry={overview.reload}
+                />
+              </div>
+            )}
+            {overview.error && (
+              <div className="mb-4 mt-3">
+                <ErrorState message={overview.error} retry={overview.reload} />
+              </div>
+            )}
+          </>
+        )}
 
         {spatialPage && alerts.length > 0 && dismissedBannerSignature !== filterSignature && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#fed7aa] bg-gradient-to-r from-[#fff7ed] via-[#fff1f2] to-[#fff7ed] px-4 py-3 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="my-6 flex flex-wrap items-center justify-between gap-3.5 rounded-xl border border-[#fed7aa] bg-gradient-to-r from-[#fff7ed] via-[#fff1f2] to-[#fff7ed] px-5 py-4 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#fee2e2] text-[#dc2626]">
                 <Flame size={18} className="animate-pulse" />
@@ -294,10 +536,10 @@ export default function Dashboard(){
           </div>
         )}
 
-        <div className={spatialPage?'':'mt-6'}>
+        <div className="mt-7">
           {page==='overview'&&<OverviewView data={data} loading={overview.loading} region={data?.region || region} selected={selected} onSelect={onSelect} onPage={navigate} onSources={()=>navigate('sources')} fullScreen={fullScreen} onFullScreen={()=>setFullScreen(value=>!value)} evidence={evidence}/>}
-          {page==='observations'&&<ObservationsView query={query} refresh={refresh} onSelect={onSelect}/>}
-          {page==='watchlist'&&<WatchlistView refresh={refresh} onSelect={onSelect} notify={notify}/>}
+          {page==='observations'&&<ObservationsView query={query} refresh={refresh} selected={selected} onSelect={onSelect}/>}
+          {page==='watchlist'&&<WatchlistView refresh={refresh} selected={selected} onSelect={onSelect} notify={notify}/>}
           {page==='history'&&<HistoryView onPage={navigate} onImported={saveImported} imported={imported} notify={notify} refresh={refresh}/>}
           {page==='model'&&<ModelView refresh={refresh} imported={imported} onPage={navigate} onModelChanged={()=>{setDates(null);if(mode!=='archive')setMode('archive');forceRefresh();}} notify={notify}/>}
           {page==='sources'&&<SourcesView refresh={refresh} onChecked={forceRefresh} onPage={navigate} notify={notify}/>}
@@ -307,6 +549,38 @@ export default function Dashboard(){
     </div>
     {selected&&<ObservationDrawer key={selected.id} event={selected} onClose={()=>setSelected(null)} onReviewed={forceRefresh} onEvidence={onEvidence} notify={notify}/>}
     {toast&&<Toast message={toast.message} error={toast.error} onClose={clearToast}/>}
-    {dateModal&&<Modal title="Select an observation window" onClose={()=>setDateModal(false)}><p className="text-[11px] leading-6 text-[#93a4af]">{mode==='archive'?'The bundled map window contains all valid observations from 25–31 March 2025. The full quarter is used in the training pipeline.':'The near-real-time feed covers the last rolling 24, 48, or 168 hours across NASA FIRMS satellites.'}</p><div className="mt-5 flex flex-wrap gap-2">{(['24h','48h','7d'] as const).map(value=><button key={value} className={`btn-secondary flex-1 ${windowSize===value&&!dates?'!border-[#dabaa0] !bg-[#fdf9f4] !text-[#b49070] font-semibold':''}`} onClick={()=>{setWindowSize(value);setDates(null);setDateModal(false);}}>{value==='7d'?'7 days':value==='48h'?'48 hours':'24 hours'}</button>)}</div><div className="my-5 flex items-center gap-3 text-[9px] text-[#b0bcc4]"><span className="h-px flex-1 bg-[#edf1f4]"/>OR CHOOSE UTC DATES<span className="h-px flex-1 bg-[#edf1f4]"/></div><div className="grid grid-cols-2 gap-3"><label className="text-[10px] text-[#95a6b2]">From<input type="date" aria-label="Start observation date" className="field mt-2" value={dateFrom} min={mode==='archive'?data?.range.availableFrom?.slice(0,10):undefined} max={mode==='archive'?data?.range.availableTo?.slice(0,10):undefined} onChange={event=>setDateFrom(event.target.value)}/></label><label className="text-[10px] text-[#95a6b2]">Through<input type="date" aria-label="End observation date" className="field mt-2" value={dateTo} min={mode==='archive'?data?.range.availableFrom?.slice(0,10):undefined} max={mode==='archive'?data?.range.availableTo?.slice(0,10):undefined} onChange={event=>setDateTo(event.target.value)}/></label></div>{dateError&&<div className="mt-4"><ErrorState message={dateError}/></div>}<div className="mt-6 flex justify-end gap-2"><button className="btn-secondary" onClick={()=>setDateModal(false)}>Cancel</button><button className="btn-primary" onClick={applyDates}>Apply window<ArrowRight size={12}/></button></div></Modal>}
+    {dateModal&&<Modal title="Select an observation window" onClose={()=>setDateModal(false)}>
+      <p className="text-xs leading-relaxed text-[#64748b]">
+        {mode==='archive'
+          ? 'Choose Today (the single latest available day in archive), rolling days, or select custom UTC dates.'
+          : 'The near-real-time feed covers Today (current UTC date) or rolling 24, 48, or 168 hours across NASA FIRMS satellites.'}
+      </p>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {(['today','24h','48h','7d'] as const).map(value => (
+          <button
+            key={value}
+            className={`btn-secondary flex-1 text-xs font-semibold ${
+              windowSize === value && !dates
+                ? '!border-[#ea580c] !bg-[#fff7ed] !text-[#c2410c]'
+                : ''
+            }`}
+            onClick={() => {
+              setWindowSize(value);
+              setDates(null);
+              setDateModal(false);
+            }}
+          >
+            {value === 'today'
+              ? 'Today'
+              : value === '7d'
+              ? '7 days'
+              : value === '48h'
+              ? '48 hours'
+              : '24 hours'}
+          </button>
+        ))}
+      </div>
+      <div className="my-5 flex items-center gap-3 text-[9px] text-[#b0bcc4]"><span className="h-px flex-1 bg-[#edf1f4]"/>OR CHOOSE UTC DATES<span className="h-px flex-1 bg-[#edf1f4]"/></div>
+      <div className="grid grid-cols-2 gap-3"><label className="text-xs text-[#64748b]">From<input type="date" aria-label="Start observation date" className="field mt-2 text-xs" value={dateFrom} min={mode==='archive'?data?.range.availableFrom?.slice(0,10):undefined} max={mode==='archive'?data?.range.availableTo?.slice(0,10):undefined} onChange={event=>setDateFrom(event.target.value)}/></label><label className="text-xs text-[#64748b]">Through<input type="date" aria-label="End observation date" className="field mt-2 text-xs" value={dateTo} min={mode==='archive'?data?.range.availableFrom?.slice(0,10):undefined} max={mode==='archive'?data?.range.availableTo?.slice(0,10):undefined} onChange={event=>setDateTo(event.target.value)}/></label></div>{dateError&&<div className="mt-4"><ErrorState message={dateError}/></div>}<div className="mt-6 flex justify-end gap-2"><button className="btn-secondary text-xs" onClick={()=>setDateModal(false)}>Cancel</button><button className="btn-primary text-xs flex items-center gap-1.5" onClick={applyDates}><span>Apply window</span><ArrowRight size={13}/></button></div></Modal>}
   </div>;
 }

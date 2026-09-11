@@ -33,7 +33,7 @@ function Sparkline({ values, color }: {values: number[]; color: string}) {
 function Metric({ label, value, unit, detail, icon, color, values, available, help }: {label: string; value: number; unit?: string; detail: string; icon: React.ReactNode; color: string; values: number[]; available: boolean; help: string}) {
   const hasTrend = available && values.length > 0 && !values.every(v => v === 0);
   return (
-    <div className="panel min-w-0 overflow-hidden px-4 pb-3.5 pt-3.5">
+    <div className="panel min-w-0 overflow-hidden px-4.5 py-4">
       <div className="flex items-center justify-between gap-1.5">
         <span className="truncate text-[11px] font-medium text-[#75828c]">{label}</span>
         <span className="shrink-0" style={{color}}>{icon}</span>
@@ -49,7 +49,7 @@ function Metric({ label, value, unit, detail, icon, color, values, available, he
           </div>
         )}
       </div>
-      <div className="mt-2 flex items-center gap-1.5 text-[9px] text-[#929ba3]">
+      <div className="mt-2.5 flex items-center gap-1.5 text-[9px] text-[#929ba3]">
         <span className="truncate">{detail}</span>
         <span className="shrink-0" title={help} tabIndex={0} aria-label={help}><CircleHelp size={10} /></span>
       </div>
@@ -70,7 +70,7 @@ export default function OverviewView({ data, loading, region, selected, onSelect
   let cumulative = 0;
   const gradient = distribution.map(item => { const from = cumulative; cumulative += item.value / Math.max(data?.total || 0, 1) * 360; return `${item.color} ${from}deg ${cumulative}deg`; }).join(', ');
   return <div>
-    <section aria-label="Observation metrics" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 xl:gap-3">
+    <section aria-label="Observation metrics" className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 xl:gap-3.5">
       <Metric label="Total observations" value={stats?.detections || 0} detail="Observed satellite pixels" icon={<ScanLine size={15} />} color="#e48d53" values={timeline.map(item => item.detections)} available={available} help="Total NASA FIRMS VIIRS hotspot detections in the selected spatial/temporal window." />
       <Metric label="Potential industrial" value={stats?.industrialCandidates || 0} detail="Close to mapped facilities" icon={<Factory size={15} />} color="#d9534f" values={[]} available={available && Boolean(data?.model.available)} help="Thermal anomalies situated near mapped industrial infrastructure or land-use with non-persistent fire characteristics." />
       <Metric label="Persistent sources" value={stats?.persistentCandidates || 0} detail="Recurrent heat signature" icon={<Flame size={15} />} color="#9985c7" values={timeline.map(item => item.static)} available={available && Boolean(data?.model.available)} help="High-recurrence anomalies at stable locations, characteristic of industrial furnaces, flare stacks, or kilns." />
@@ -80,7 +80,7 @@ export default function OverviewView({ data, loading, region, selected, onSelect
       <Metric label="Mean FRP" value={stats?.meanFrp || 0} unit="MW" detail="Fire radiative power" icon={<Zap size={15} />} color="#78a8b6" values={timeline.map(item => item.meanFrp)} available={available && Boolean(stats?.detections)} help="Average Fire Radiative Power (MW) across mapped detections." />
     </section>
 
-    <div className="mt-5 grid gap-4 min-[1200px]:grid-cols-[minmax(0,1fr)_300px] min-[1500px]:grid-cols-[minmax(0,1fr)_325px]">
+    <div className="mt-7 grid gap-4.5 min-[1200px]:grid-cols-[minmax(0,1fr)_300px] min-[1500px]:grid-cols-[minmax(0,1fr)_325px]">
       <section className={fullScreen ? 'panel fixed inset-4 z-[2500] overflow-hidden shadow-2xl' : 'panel min-w-0 overflow-hidden'} aria-label="Geospatial overview">
         <div className="flex h-[63px] items-center justify-between px-5">
           <div className="flex items-center gap-2.5"><Focus className="text-[#819099]" size={17} strokeWidth={1.6} /><div><h2 className="text-[12px] font-semibold text-[#35414a]">Geospatial overview</h2><p className="mt-0.5 text-[9px] text-[#9aa3aa]">{region.name} <span className="mx-1">·</span> Click an observation to investigate</p></div></div>
@@ -110,7 +110,7 @@ export default function OverviewView({ data, loading, region, selected, onSelect
       </section>
     </div>
 
-    <div className="mt-5 grid gap-4 lg:grid-cols-[1.45fr_1fr]">
+    <div className="mt-7 grid gap-4.5 lg:grid-cols-[1.45fr_1fr]">
       <section className="panel min-w-0 px-5 pb-3 pt-4">
         <div className="mb-4 flex items-center justify-between"><div><h2 className="text-[12px] font-semibold">Thermal activity</h2><p className="mt-1 text-[9px] text-[#9aa5ae]">Daily observations in your selected window · UTC</p></div><div className="flex items-center gap-3 text-[8px] text-[#8f9ba4]"><span className="flex items-center gap-1"><i className="h-1.5 w-1.5 rounded-sm bg-[#e5b38a]" />All pixels</span><span className="flex items-center gap-1"><i className="h-1.5 w-1.5 rounded-sm bg-[#a99bce]" />Static candidates</span></div></div>
         {available && timeline.length ? <div className="h-[155px] w-full min-w-0"><ResponsiveContainer width="100%" height="100%"><BarChart data={timeline} margin={{top: 8, right: 3, bottom: 0, left: -25}} barGap={3}>
