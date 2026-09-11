@@ -1,7 +1,7 @@
 {
   "status": "ready",
   "model_id": "xgb-591d54ea-thermal",
-  "trained_at": "2026-09-05T19:29:49.480391+00:00",
+  "trained_at": "2026-09-11T20:20:21.057760+00:00",
   "algorithm": "XGBoost",
   "library_version": "3.4.1",
   "feature_mode": "Thermal + temporal baseline",
