@@ -25,10 +25,18 @@ interface Props {
   infrastructure?: Evidence['osm']['features'];
 }
 
-function ObservationLayer({ events, onSelect, visible, scaled }: {events: ThermalEvent[]; onSelect: Props['onSelect']; visible: boolean; scaled: boolean}) {
+function ObservationLayer({ events, onSelect, onHover, visible, scaled }: {
+  events: ThermalEvent[];
+  onSelect: Props['onSelect'];
+  onHover: (event: ThermalEvent | null) => void;
+  visible: boolean;
+  scaled: boolean;
+}) {
   const map = useMap();
   const click = useRef(onSelect);
+  const hover = useRef(onHover);
   useEffect(() => { click.current = onSelect; }, [onSelect]);
+  useEffect(() => { hover.current = onHover; }, [onHover]);
   useEffect(() => {
     if (!visible) return;
     const layer = L.layerGroup().addTo(map);
@@ -50,20 +58,22 @@ function ObservationLayer({ events, onSelect, visible, scaled }: {events: Therma
       const color = CLASSES[event.prediction.classKey]?.color || '#94a3b8';
       const marker = L.circleMarker([event.latitude, event.longitude], {
         renderer,
-        radius: scaled ? Math.min(4.8, 1.7 + Math.sqrt(event.frp) * .19) : 3.2,
+        radius: scaled ? Math.min(6.5, 2.5 + Math.sqrt(event.frp) * .22) : 4.5,
         color,
-        weight: .7,
+        weight: 1,
         opacity: .95,
         fillColor: color,
         fillOpacity: .85
       });
-      const coordsText = coordinates(event.latitude, event.longitude);
+      const coordsText = coordinates(event.latitude, event.longitude, 4);
       const classText = CLASSES[event.prediction.classKey]?.short || event.prediction.classKey;
       marker.bindTooltip(
-        `<div style="font-weight:600">${coordsText}</div><div style="color:#acbcc7;margin-top:3px">${event.frp.toFixed(1)} MW · ${classText}</div>`,
-        { direction: 'top', offset: [0, -5] }
+        `<div style="font-weight:700;font-size:11px">${coordsText}</div><div style="color:#acbcc7;margin-top:3px;font-size:10.5px">${event.frp.toFixed(1)} MW · ${classText}</div>`,
+        { direction: 'top', offset: [0, -6], sticky: true }
       );
       marker.on('click', () => click.current(event));
+      marker.on('mouseover', () => hover.current(event));
+      marker.on('mouseout', () => hover.current(null));
       marker.addTo(layer);
     }
 
@@ -72,12 +82,12 @@ function ObservationLayer({ events, onSelect, visible, scaled }: {events: Therma
       const isCritical = event.risk?.level === 'critical';
       const haloColor = isCritical ? '#ef4444' : '#f97316';
       const coreColor = isCritical ? '#dc2626' : '#ea580c';
-      const baseRadius = scaled ? Math.min(6.5, 2.8 + Math.sqrt(event.frp) * .22) : 4.5;
+      const baseRadius = scaled ? Math.min(7.5, 3.2 + Math.sqrt(event.frp) * .25) : 5.5;
 
       // Outer glowing halo (non-interactive so it doesn't double-bind events)
       const halo = L.circleMarker([event.latitude, event.longitude], {
         renderer,
-        radius: baseRadius + 6,
+        radius: baseRadius + 7,
         color: haloColor,
         weight: 2,
         opacity: 0.95,
@@ -92,23 +102,25 @@ function ObservationLayer({ events, onSelect, visible, scaled }: {events: Therma
         renderer,
         radius: baseRadius,
         color: '#ffffff',
-        weight: 1.8,
+        weight: 2,
         opacity: 1,
         fillColor: coreColor,
         fillOpacity: 0.95,
       });
 
       const facilityName = event.nearbyFacility || event.context?.industrial_site_name;
-      const facHtml = facilityName ? `<div style="color:#fef08a;font-size:9px;margin-top:3px">Facility: ${facilityName}</div>` : '';
-      const coordsText = `${coordinates(event.latitude, event.longitude)} · ${event.frp.toFixed(1)} MW FRP`;
+      const facHtml = facilityName ? `<div style="color:#fef08a;font-size:9.5px;margin-top:3px">Facility: ${facilityName}</div>` : '';
+      const coordsText = `${coordinates(event.latitude, event.longitude, 4)} · ${event.frp.toFixed(1)} MW FRP`;
       const riskText = `Risk Score: ${((event.risk?.score || 0) * 100).toFixed(1)}/100 · ${event.prediction.label}`;
       const badgeText = isCritical ? 'CRITICAL PRIORITY ALERT' : 'HIGH PRIORITY ALERT';
 
       core.bindTooltip(
-        `<div style="min-width:180px;padding:2px"><div style="font-weight:800;font-size:10px;letter-spacing:0.04em;color:${haloColor};margin-bottom:3px">${badgeText}</div><div style="font-weight:600;font-size:11px">${coordsText}</div><div style="color:#cad5dd;font-size:9.5px;margin-top:2px">${riskText}</div>${facHtml}</div>`,
-        { direction: 'top', offset: [0, -8] }
+        `<div style="min-width:180px;padding:3px"><div style="font-weight:800;font-size:10px;letter-spacing:0.04em;color:${haloColor};margin-bottom:3px">${badgeText}</div><div style="font-weight:700;font-size:11px">${coordsText}</div><div style="color:#cad5dd;font-size:10px;margin-top:2px">${riskText}</div>${facHtml}</div>`,
+        { direction: 'top', offset: [0, -8], sticky: true }
       );
       core.on('click', () => click.current(event));
+      core.on('mouseover', () => hover.current(event));
+      core.on('mouseout', () => hover.current(null));
 
       halo.addTo(layer);
       core.addTo(layer);
@@ -127,7 +139,13 @@ function MapEffects({ region, selected, fullScreen, reset }: {region: Region; se
   useEffect(() => {
     if (!selected) return;
     map.flyTo([selected.latitude, selected.longitude], Math.max(map.getZoom(), 7), { duration: .65 });
-    const ring = L.circleMarker([selected.latitude, selected.longitude], { radius: 11, color: '#ffffff', weight: 1.8, fillOpacity: .1 }).addTo(map);
+    const ring = L.circleMarker([selected.latitude, selected.longitude], {
+      radius: 12,
+      color: '#ffffff',
+      weight: 2,
+      fillOpacity: .1,
+      interactive: false,
+    }).addTo(map);
     return () => { map.removeLayer(ring); };
   }, [selected, map]);
   useEffect(() => { const id = setTimeout(() => map.invalidateSize(), 150); return () => clearTimeout(id); }, [fullScreen, map]);
@@ -173,7 +191,7 @@ function InfrastructureLayer({ features }: {features?: Evidence['osm']['features
 }
 
 function Pointer({ onMove }: {onMove: (value: string) => void}) {
-  useMapEvents({ mousemove(event) { onMove(coordinates(event.latlng.lat, event.latlng.lng, 2)); } });
+  useMapEvents({ mousemove(event) { onMove(coordinates(event.latlng.lat, event.latlng.lng, 4)); } });
   return null;
 }
 
@@ -188,9 +206,11 @@ export default function ThermalMap({ events, region, selected, onSelect, fullScr
   const [showBoundaries, setShowBoundaries] = useState(true);
   const [scaled, setScaled] = useState(true);
   const [reset, setReset] = useState(0);
-  const [pointer, setPointer] = useState('Hover to inspect coordinates');
+  const [pointer, setPointer] = useState('Move mouse over map to inspect coordinates');
+  const [hovered, setHovered] = useState<ThermalEvent | null>(null);
   const [tileError, setTileError] = useState(false);
   const [mapError, setMapError] = useState(false);
+  const activeEvent = hovered || selected;
   useEffect(() => {
     const abort = new AbortController();
     Promise.all(['/geo/countries.geojson', '/geo/places.geojson'].map(url => fetch(url, { signal: abort.signal }).then(response => { if (!response.ok) throw new Error('Reference map unavailable'); return response.json(); })))
@@ -229,13 +249,58 @@ export default function ThermalMap({ events, region, selected, onSelect, fullScr
           eventHandlers={{ tileerror: () => setTileError(true) }}
         />
       )}
-      <ObservationLayer events={events} visible={showDetections} scaled={scaled} onSelect={onSelect} />
+      <ObservationLayer events={events} visible={showDetections} scaled={scaled} onSelect={onSelect} onHover={setHovered} />
       <InfrastructureLayer features={infrastructure} />
       <MapEffects region={region} selected={selected} fullScreen={fullScreen} reset={reset} />
       <Pointer onMove={setPointer} />
       <ZoomControl position="topright" />
       <ScaleControl position="bottomleft" imperial={false} />
     </MapContainer>
+
+    {/* Live Telemetry & Location HUD Bar */}
+    <div className="pointer-events-none absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex max-w-[94%] items-center gap-2 rounded-lg border border-[#52637080] bg-[#1a2933f2] px-3.5 py-2 text-xs text-[#dbe5ec] shadow-xl backdrop-blur-md transition-all">
+      {activeEvent ? (
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <span
+            className="flex items-center gap-1.5 font-bold tracking-wide text-[11px]"
+            style={{ color: CLASSES[activeEvent.prediction.classKey]?.color || '#f97316' }}
+          >
+            <span
+              className="h-2 w-2 rounded-full animate-ping"
+              style={{ backgroundColor: CLASSES[activeEvent.prediction.classKey]?.color || '#f97316' }}
+            />
+            {hovered ? 'INSPECTING HOTSPOT' : 'SELECTED TARGET'}
+          </span>
+          <span className="h-3 w-px bg-[#3e515d]" />
+          <span className="font-mono font-semibold text-white">
+            {coordinates(activeEvent.latitude, activeEvent.longitude, 4)}
+          </span>
+          <span className="h-3 w-px bg-[#3e515d]" />
+          <span className="text-[#f59e0b] font-semibold">
+            {activeEvent.frp.toFixed(1)} MW FRP
+          </span>
+          <span className="h-3 w-px bg-[#3e515d]" />
+          <span className="text-[#cbd5e1] hidden sm:inline">
+            {activeEvent.prediction.label || CLASSES[activeEvent.prediction.classKey]?.label}
+          </span>
+          {(activeEvent.nearbyFacility || activeEvent.context?.industrial_site_name) && (
+            <>
+              <span className="h-3 w-px bg-[#3e515d] hidden md:inline" />
+              <span className="text-[#fef08a] truncate max-w-[220px] hidden md:inline font-medium">
+                🏭 {activeEvent.nearbyFacility || activeEvent.context?.industrial_site_name}
+              </span>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-[11px] text-[#94a3b8]">
+          <span className="flex h-1.5 w-1.5 rounded-full bg-[#10b981]" />
+          <span className="font-medium text-[#cbd5e1]">Cursor Location:</span>
+          <span className="font-mono font-medium text-white">{pointer}</span>
+          <span className="hidden sm:inline text-[#64748b]">· WGS 84</span>
+        </div>
+      )}
+    </div>
     <div className="absolute top-4 left-4 z-[1000] flex items-start gap-2">
       <div className="relative">
         <button onClick={() => setLayersOpen(!layersOpen)} aria-expanded={layersOpen} className="flex items-center gap-2 rounded-md border border-[#53656e80] bg-[#253640ed] px-3 py-2 text-[11px] font-medium text-[#d3dce1] shadow-sm"><Layers size={13} /> Map layers <ChevronDown size={12} /></button>
