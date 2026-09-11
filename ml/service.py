@@ -28,6 +28,21 @@ current_card: dict[str, Any] | None = None
 current_mtime = 0.0
 jobs: dict[str, dict] = {}
 
+
+@app.on_event("startup")
+def startup_event():
+    def _ensure_default_dataset():
+        if not DEFAULT_DATA.exists():
+            try:
+                print("[ml.service] DEFAULT_DATA missing; starting background mirror download...", flush=True)
+                from ml.download import download
+                download()
+                print("[ml.service] Background mirror download completed successfully.", flush=True)
+            except Exception as e:
+                print(f"[ml.service] Background download error: {e}", flush=True)
+    threading.Thread(target=_ensure_default_dataset, daemon=True).start()
+
+
 @app.middleware("http")
 async def internal_authorization(request: Request, call_next):
     key = os.getenv("INTERNAL_SERVICE_KEY") or os.getenv("ADMIN_API_KEY")
@@ -282,6 +297,25 @@ def list_datasets():
             })
         except Exception:
             pass
+    else:
+        summary_path = ROOT / "data/dataset-summary.json"
+        if summary_path.exists():
+            try:
+                summary = json.loads(summary_path.read_text())
+                datasets.append({
+                    "dataset_id": "default",
+                    "name": "Pinned India archive · Jan–Mar 2025",
+                    "rows": summary.get("rows", 316468),
+                    "quality": summary.get("quality", {}),
+                    "date_start": summary.get("date_start"),
+                    "date_end": summary.get("date_end"),
+                    "columns": ["latitude", "longitude", "bright_ti4", "scan", "track", "acq_date", "acq_time", "satellite", "confidence", "bright_ti5", "frp", "daynight", "type"],
+                    "has_sentinel": False,
+                    "has_osm": False,
+                    "has_context": False,
+                })
+            except Exception:
+                pass
 
     uploads_dir = ROOT / "data/uploads"
     if uploads_dir.exists():
@@ -308,6 +342,45 @@ def list_datasets():
     return {"datasets": datasets}
 
 
+@app.post("/datasets/{dataset_id}/upload")
+async def upload_dataset(dataset_id: str, request: Request):
+    if not __import__('re').fullmatch(r"[a-f0-9-]{36}", dataset_id):
+        raise HTTPException(422, "Invalid dataset identifier")
+    uploads_dir = ROOT / "data/uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    target_path = uploads_dir / f"{dataset_id}.csv"
+
+    content = await request.body()
+    if len(content) > 85 * 1024 * 1024:
+        raise HTTPException(400, "File exceeds upload limit (80 MB)")
+    if len(content) == 0:
+        raise HTTPException(400, "Empty upload payload")
+    if not bytes(content[:200]).lower().startswith(b"latitude,longitude,") and not b"latitude" in content[:400].lower():
+        raise HTTPException(422, "File does not appear to be a valid FIRMS CSV file.")
+
+    target_path.write_bytes(content)
+
+    from urllib.parse import unquote
+    raw_name = request.headers.get("x-dataset-name", "")
+    name = unquote(raw_name) if raw_name else f"custom-{dataset_id[:8]}"
+    raw_prov = request.headers.get("x-provenance-url", "")
+    provenance_clean = unquote(raw_prov) if raw_prov else "https://firms.modaps.eosdis.nasa.gov/download/"
+
+    val = validate_dataset(dataset_id)
+    metadata = {
+        "name": name[:120],
+        "primary_source": "User-provided FIRMS archive",
+        "primary_url": provenance_clean,
+        "download_url": provenance_clean,
+        "sha256": val["sha256"],
+        "bytes": len(content),
+        "retrieved_at": timestamp(),
+        "notes": ["User-supplied file. Schema and SHA-256 checked; authenticity, label provenance and NASA reprocessing status must be independently verified."]
+    }
+    (uploads_dir / f"{dataset_id}.provenance.json").write_text(json.dumps(metadata, indent=2))
+    return {**val, "name": metadata["name"], "provenance": metadata}
+
+
 @app.get("/datasets/{dataset_id}/validate")
 def validate_dataset(dataset_id: str):
     path = dataset_path(dataset_id)
@@ -332,6 +405,22 @@ def validate_dataset(dataset_id: str):
         }
     except Exception as exc:
         raise HTTPException(422, f"Invalid archive: {exc}") from exc
+
+
+@app.get("/replay/active")
+def get_active_replay():
+    manifest_path = ROOT / "data/replay/active-manifest.json"
+    replay_path = ROOT / "data/replay/active-replay.csv.gz"
+    if not manifest_path.exists() or not replay_path.exists():
+        manifest_path = ROOT / "data/replay/manifest.json"
+        replay_path = ROOT / "data/replay/india-2025-q1.csv.gz"
+    if not manifest_path.exists() or not replay_path.exists():
+        raise HTTPException(404, "No replay available")
+    import base64
+    return {
+        "manifest": json.loads(manifest_path.read_text()),
+        "replay_b64": base64.b64encode(replay_path.read_bytes()).decode("ascii")
+    }
 
 
 @app.get("/sources/probe")

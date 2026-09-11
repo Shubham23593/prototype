@@ -35,7 +35,7 @@ function authorize(req: express.Request, res: express.Response, next: express.Ne
     try {
       const host = new URL(origin).hostname;
       const forwarded = (req.get('x-forwarded-host') || req.get('host') || '').split(':')[0];
-      if (host !== forwarded && host !== 'localhost' && host !== '127.0.0.1' && !host.endsWith('.e2b.app')) { res.status(403).json({ error: 'Cross-origin mutations are not allowed' }); return; }
+      if (host !== forwarded && host !== 'localhost' && host !== '127.0.0.1' && !host.endsWith('.e2b.app') && !host.endsWith('.vercel.app')) { res.status(403).json({ error: 'Cross-origin mutations are not allowed' }); return; }
     } catch { res.status(403).json({ error: 'Invalid request origin' }); return; }
   }
   next();
@@ -138,16 +138,49 @@ app.post('/api/history/import', authorize, importLimit, uploader.single('file'),
   try {
     const rawUrl = String(req.body.provenanceUrl || '').trim() || 'https://firms.modaps.eosdis.nasa.gov/download/';
     const provenanceUrl = z.string().url().max(2000).refine(value => ['https:', 'http:'].includes(new URL(value).protocol), 'Use an HTTP(S) source URL').parse(rawUrl);
-    const result = await mlRequest<Record<string, unknown>>(`/datasets/${id}/validate`, undefined, 120000);
+    const fileBytes = await fs.readFile(req.file.path);
+    const metadata = { name: path.basename(req.file.originalname).slice(0, 120), primary_source: 'User-provided FIRMS archive', primary_url: provenanceUrl,
+      download_url: provenanceUrl, bytes: req.file.size, retrieved_at: new Date().toISOString(),
+      notes: ['User-supplied file. Schema and SHA-256 checked; authenticity, label provenance and NASA reprocessing status must be independently verified.'] };
+
+    // Stream raw file bytes directly to the ML service to support multi-service cloud architecture
+    const mlUrl = `${process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000'}/datasets/${id}/upload`;
+    const serviceKey = process.env.INTERNAL_SERVICE_KEY || process.env.ADMIN_API_KEY;
+    const headers: Record<string, string> = {
+      'Content-Type': 'text/csv',
+      'X-Dataset-Name': encodeURIComponent(metadata.name),
+      'X-Provenance-Url': encodeURIComponent(provenanceUrl),
+    };
+    if (serviceKey) headers['X-Service-Key'] = serviceKey;
+
+    let result: Record<string, unknown>;
+    const mlRes = await fetch(mlUrl, {
+      method: 'POST',
+      headers,
+      body: fileBytes,
+      signal: AbortSignal.timeout(120000),
+    });
+
+    if (!mlRes.ok) {
+      // Fallback: if upload route is unavailable (e.g. shared local disk), validate directly
+      try {
+        result = await mlRequest<Record<string, unknown>>(`/datasets/${id}/validate`, undefined, 120000);
+      } catch {
+        let errBody: any;
+        try { errBody = await mlRes.json(); } catch {}
+        throw new Error(errBody?.detail || errBody?.error || `ML validation failed (${mlRes.status})`);
+      }
+    } else {
+      result = await mlRes.json() as Record<string, unknown>;
+    }
+
     const rowCount = Number(result.rows) || 0;
     if (rowCount <= 0) {
       throw new Error('Parsed archive contains 0 valid FIRMS observations. Check that the file has valid coordinates, timestamps, and brightness/frp columns.');
     }
-    const metadata = { name: path.basename(req.file.originalname).slice(0, 120), primary_source: 'User-provided FIRMS archive', primary_url: provenanceUrl,
-      download_url: provenanceUrl, sha256: result.sha256, bytes: req.file.size, retrieved_at: new Date().toISOString(),
-      notes: ['User-supplied file. Schema and SHA-256 checked; authenticity, label provenance and NASA reprocessing status must be independently verified.'] };
-    await fs.writeFile(path.join(uploads, `${id}.provenance.json`), JSON.stringify(metadata, null, 2));
-    res.status(201).json({ ...result, name: metadata.name, provenance: metadata });
+    const fullMetadata = { ...metadata, sha256: result.sha256 as string };
+    await fs.writeFile(path.join(uploads, `${id}.provenance.json`), JSON.stringify(fullMetadata, null, 2)).catch(() => {});
+    res.status(201).json({ ...result, name: metadata.name, provenance: fullMetadata });
   } catch (error) { await fs.unlink(req.file.path).catch(() => {}); throw error; }
 });
 

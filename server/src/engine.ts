@@ -80,8 +80,20 @@ export class Engine {
         await fs.access(manifestPath);
         await fs.access(replayPath);
       } catch {
-        manifestPath = 'data/replay/manifest.json';
-        replayPath = 'data/replay/india-2025-q1.csv.gz';
+        try {
+          const sync = await mlRequest<{ manifest: Record<string, unknown>; replay_b64: string }>('/replay/active', undefined, 10000);
+          if (sync?.manifest && sync?.replay_b64) {
+            await fs.mkdir('data/replay', { recursive: true });
+            await fs.writeFile(manifestPath, JSON.stringify(sync.manifest, null, 2));
+            await fs.writeFile(replayPath, Buffer.from(sync.replay_b64, 'base64'));
+          } else {
+            manifestPath = 'data/replay/manifest.json';
+            replayPath = 'data/replay/india-2025-q1.csv.gz';
+          }
+        } catch {
+          manifestPath = 'data/replay/manifest.json';
+          replayPath = 'data/replay/india-2025-q1.csv.gz';
+        }
       }
       this.archiveMeta = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
       const compressed = await fs.readFile(replayPath);
