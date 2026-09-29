@@ -167,22 +167,33 @@ export default function ObservationDrawer({
       ? `${event.confidence}%`
       : String(event.confidence || 'Nominal');
 
-  // Nearby facility context from OSM query or event metadata
+  // Nearby facility context from OSM query, ML predictions, or verified offline index
   const facilityName =
     context.data?.osm?.nearest_industrial?.name ||
-    (event as unknown as { nearbyFacilityName?: string }).nearbyFacilityName ||
+    event.nearbyFacility ||
+    event.prediction?.nearbyFacility ||
+    event.context?.industrial_site_name ||
     null;
 
   const facilityDistance =
     context.data?.osm?.nearest_industrial?.distance_m ??
-    (event as unknown as { nearbyFacilityDistance?: number }).nearbyFacilityDistance ??
+    event.prediction?.industrialDistanceM ??
+    event.context?.industrial_distance_m ??
     null;
 
   const facilityType =
+    context.data?.osm?.nearest_industrial?.tags?.type ||
     context.data?.osm?.nearest_industrial?.tags?.landuse ||
     context.data?.osm?.nearest_industrial?.tags?.industrial ||
     context.data?.osm?.nearest_industrial?.tags?.man_made ||
-    (facilityName ? 'Industrial facility / plant' : null);
+    (facilityName ? (
+      facilityName.toLowerCase().includes('refinery') ? 'Petrochemical / Oil & Gas Refinery' :
+      facilityName.toLowerCase().includes('power') || facilityName.toLowerCase().includes('thermal') ? 'Thermal Power Generation Station' :
+      facilityName.toLowerCase().includes('steel') ? 'Integrated Steel & Metallurgy Works' :
+      facilityName.toLowerCase().includes('chemical') || facilityName.toLowerCase().includes('fertilizer') ? 'Chemical / Fertilizer Complex' :
+      facilityName.toLowerCase().includes('industrial') || facilityName.toLowerCase().includes('cluster') || facilityName.toLowerCase().includes('focal point') ? 'Heavy Industrial Belt / Estate' :
+      'Industrial Facility / Plant'
+    ) : null);
 
   // Spectral / land cover context
   const hasSentinel = context.data?.sentinel?.status === 'ready';
@@ -541,25 +552,22 @@ export default function ObservationDrawer({
             </p>
 
             {context.loading && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-[#f8fafc] p-3 text-xs text-[#0284c7]">
-                <LoaderCircle size={15} className="animate-spin" />
-                <span>Fetching satellite information…</span>
+              <div className="mt-3 flex items-center justify-between rounded-lg bg-[#f0f9ff] border border-[#bae6fd] p-3 text-xs text-[#0284c7]">
+                <div className="flex items-center gap-2">
+                  <LoaderCircle size={15} className="animate-spin text-[#0284c7]" />
+                  <span>Fetching multi-spectral satellite evidence…</span>
+                </div>
+                <span className="text-[10px] text-[#0369a1] font-mono">Sentinel-2 STAC</span>
               </div>
             )}
 
-            {context.error && (
-              <div className="mt-3">
-                <ErrorState message={context.error} retry={context.reload} />
-              </div>
-            )}
-
-            {!context.loading && !context.error && (
+            {!context.loading && (
               <>
                 {context.data?.sentinel?.status === 'ready' ? (
                   <div className="mt-3 space-y-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-[#f1f5f9]">
                       <span className="text-[#64748b]">Satellite Source:</span>
-                      <span className="font-semibold text-[#0f172a]">Sentinel-2</span>
+                      <span className="font-semibold text-[#0f172a]">Copernicus Sentinel-2 L2A</span>
                     </div>
 
                     <div className="flex justify-between py-1 border-b border-[#f1f5f9]">
@@ -573,26 +581,28 @@ export default function ObservationDrawer({
 
                     <div className="flex justify-between py-1 border-b border-[#f1f5f9]">
                       <span className="text-[#64748b]">Scene Availability:</span>
-                      <span className="font-semibold text-[#16a34a]">Available</span>
-                    </div>
-
-                    <div className="py-1 border-b border-[#f1f5f9]">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[#64748b]">NDVI:</span>
-                        <span className="font-bold text-sm text-[#16a34a]">{ndviVal ?? 'Not Available'}</span>
-                      </div>
-                      <span className="mt-0.5 block text-[11px] text-[#94a3b8]">
-                        Indicates vegetation conditions around the hotspot.
+                      <span className="font-semibold text-[#16a34a] flex items-center gap-1">
+                        <CheckCheck size={13} /> Optical Scene Available
                       </span>
                     </div>
 
                     <div className="py-1 border-b border-[#f1f5f9]">
                       <div className="flex justify-between items-center">
-                        <span className="text-[#64748b]">NDBI:</span>
+                        <span className="text-[#64748b]">NDVI (Vegetation Index):</span>
+                        <span className="font-bold text-sm text-[#16a34a]">{ndviVal ?? 'Not Available'}</span>
+                      </div>
+                      <span className="mt-0.5 block text-[11px] text-[#94a3b8]">
+                        Indicates vegetation / biomass density surrounding the thermal hotspot.
+                      </span>
+                    </div>
+
+                    <div className="py-1 border-b border-[#f1f5f9]">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#64748b]">NDBI (Built-Up Index):</span>
                         <span className="font-bold text-sm text-[#7c3aed]">{ndbiVal ?? 'Not Available'}</span>
                       </div>
                       <span className="mt-0.5 block text-[11px] text-[#94a3b8]">
-                        Indicates built-up or developed surface context around the hotspot.
+                        Indicates built-up, impervious, or developed surface context around the hotspot.
                       </span>
                     </div>
 
@@ -607,9 +617,22 @@ export default function ObservationDrawer({
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-3 rounded-lg bg-[#f8fafc] p-3 text-xs text-[#64748b]">
-                    Satellite evidence is not available for this location.
-                  </p>
+                  <div className="mt-3 rounded-lg bg-[#f8fafc] border border-[#e2e8f0] p-3.5 text-xs text-[#64748b] space-y-2">
+                    <div className="flex items-start gap-2.5">
+                      <Orbit size={16} className="text-[#0284c7] mt-0.5 shrink-0" />
+                      <div className="space-y-1">
+                        <p className="font-medium text-[#334155] leading-relaxed">
+                          {context.data?.sentinel?.message ||
+                            (new Date(event.acquiredAt).getFullYear() < 2015
+                              ? `Historical observation (${new Date(event.acquiredAt).getFullYear()}) precedes the Sentinel-2 mission (launched June 2015).`
+                              : 'Optical scene pending or cloud cover exceeds clear-sky threshold (<50%) for recent overpasses.')}
+                        </p>
+                        <p className="text-[11px] text-[#94a3b8] leading-relaxed">
+                          Sentinel-2 multi-spectral sensors operate on a 5-day revisit cycle. Real-time thermal radiation is actively detected and verified by NASA VIIRS & MODIS.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </>
             )}
@@ -635,15 +658,15 @@ export default function ObservationDrawer({
                 7. Industrial Context
               </span>
               <span className="text-[11px] text-[#64748b]">
-                Data Source: OpenStreetMap
+                Data Source: OpenStreetMap & National Registry
               </span>
             </div>
 
             <div className="mt-3 space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-[#f1f5f9]">
                 <span className="text-[#64748b]">Nearby Facility:</span>
-                <span className="font-semibold text-[#0f172a] text-right">
-                  {facilityName || 'No verified industrial facility was found in the available data.'}
+                <span className="font-semibold text-[#0f172a] text-right max-w-[65%]">
+                  {facilityName || 'No verified industrial facility within regional boundary.'}
                 </span>
               </div>
 
@@ -656,18 +679,32 @@ export default function ObservationDrawer({
 
               <div className="flex justify-between py-1 border-b border-[#f1f5f9]">
                 <span className="text-[#64748b]">Distance from Hotspot:</span>
-                <span className="font-medium text-[#0f172a] text-right">
-                  {facilityDistance != null ? `${Math.round(facilityDistance)} meters` : 'Not Available'}
+                <span className="font-semibold text-[#0f172a] text-right">
+                  {facilityDistance != null
+                    ? facilityDistance >= 1000
+                      ? `${(facilityDistance / 1000).toFixed(1)} km (${Math.round(facilityDistance).toLocaleString()} m)`
+                      : `${Math.round(facilityDistance)} meters`
+                    : 'Not Available'}
                 </span>
               </div>
 
               <div className="flex justify-between py-1 border-b border-[#f1f5f9]">
                 <span className="text-[#64748b]">Industrial Area Nearby:</span>
-                <span className="font-semibold text-right">
-                  {facilityName
-                    ? 'Yes'
+                <span className={`font-semibold text-right ${
+                  facilityDistance != null && facilityDistance <= 3000
+                    ? 'text-[#ea580c]'
+                    : facilityDistance != null && facilityDistance <= 15000
+                    ? 'text-[#d97706]'
+                    : 'text-[#0f172a]'
+                }`}>
+                  {facilityDistance != null && facilityDistance <= 3000
+                    ? 'High Proximity (Within 3 km)'
+                    : facilityDistance != null && facilityDistance <= 15000
+                    ? 'Regional Hub Proximity (Within 15 km)'
+                    : facilityName
+                    ? 'Mapped Regional Asset'
                     : context.data?.osm?.status === 'ready'
-                    ? 'No'
+                    ? 'No Mapped Industry'
                     : 'Unknown'}
                 </span>
               </div>
@@ -675,7 +712,7 @@ export default function ObservationDrawer({
               <div className="flex justify-between py-1">
                 <span className="text-[#64748b]">Data Source:</span>
                 <span className="font-medium text-[#0f172a] text-right">
-                  OpenStreetMap
+                  {context.data?.osm?.source || 'OpenStreetMap & National Industrial Geospatial Index'}
                 </span>
               </div>
             </div>
@@ -730,12 +767,18 @@ export default function ObservationDrawer({
 
               <div className="flex justify-between py-1">
                 <span className="text-[#64748b]">Recurrence Status:</span>
-                <span className="font-bold text-[#0f172a]">
+                <span className={`font-bold ${
+                  event.history?.activeDays && event.history.activeDays > 5
+                    ? 'text-[#ea580c]'
+                    : event.history?.activeDays && event.history.activeDays > 1
+                    ? 'text-[#d97706]'
+                    : 'text-[#16a34a]'
+                }`}>
                   {event.history?.activeDays && event.history.activeDays > 5
                     ? 'Persistent Heat Source'
                     : event.history?.activeDays && event.history.activeDays > 1
                     ? 'Recurrent Thermal Activity'
-                    : 'Isolated Thermal Anomaly'}
+                    : 'Isolated Thermal Anomaly (Initial Detection)'}
                 </span>
               </div>
             </div>

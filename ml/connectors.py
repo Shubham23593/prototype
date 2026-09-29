@@ -62,7 +62,7 @@ def osm_context(latitude: float, longitude: float) -> dict:
         last_exc = None
         for endpoint in OVERPASS_ENDPOINTS:
             try:
-                with httpx.Client(verify=ssl.create_default_context(), timeout=httpx.Timeout(20, connect=6), headers=HEADERS) as client:
+                with httpx.Client(verify=ssl.create_default_context(), timeout=httpx.Timeout(4.0, connect=2.0), headers=HEADERS) as client:
                     response = client.post(endpoint, data={"data": query})
                     response.raise_for_status()
                     payload = response.json()
@@ -73,11 +73,11 @@ def osm_context(latitude: float, longitude: float) -> dict:
                 last_exc = exc
                 continue
         if payload is None:
-            # Fallback to verified offline industrial index if inside an industrial zone
+            # Fast fallback to verified offline industrial index
             try:
                 from ml.industrial_index import lookup_industrial_context
                 fallback = lookup_industrial_context(latitude, longitude)
-                if fallback["in_industrial_zone"]:
+                if fallback.get("nearest_facility_name"):
                     return {
                         "status": "ready",
                         "source": "Offline Industrial Spatial Index (Overpass endpoints unreachable)",
@@ -248,7 +248,7 @@ def sentinel_context(latitude: float, longitude: float, acquired_at: str) -> dic
         payload = {"collections": ["sentinel-2-l2a"], "intersects": {"type": "Point", "coordinates": [longitude, latitude]},
                    "datetime": f"{begin.isoformat()}/{end.isoformat()}", "limit": 6,
                    "query": {"eo:cloud_cover": {"lt": 50}}, "sortby": [{"field": "properties.datetime", "direction": "desc"}]}
-        with httpx.Client(verify=ssl.create_default_context(), timeout=httpx.Timeout(20, connect=8), headers=HEADERS) as client:
+        with httpx.Client(verify=ssl.create_default_context(), timeout=httpx.Timeout(8.0, connect=3.0), headers=HEADERS) as client:
             response = client.post(f"{STAC_URL}/search", json=payload)
             response.raise_for_status()
             scenes = response.json().get("features", [])
